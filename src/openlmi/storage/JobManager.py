@@ -208,7 +208,7 @@ class Job(object):
 
     @cmpi_logging.trace_method
     def finish_method(self, new_state, return_value=None, return_type=None,
-            output_arguments=None, error=None):
+            output_arguments=None, error=None, affected_elements=None):
         """
         Mark the job as finished, with given return value, output parameters and
         error.
@@ -224,12 +224,18 @@ class Job(object):
             any output parameters.
         :param error: (``CIMError``) Error raised by the job. Can be None,
             when the job finished successfully.
+        :param affected_elements: (``array of CIMInstanceName``) New list of
+            affected elements to generate LMI_<name>JobAffectedElement
+            association. If None, the old list, passed to constructor, remains
+            untouched.
         """
         self.lock()
         self.return_value = return_value
         self.return_value_type = return_type
         self.output_arguments = output_arguments
         self.error = error
+        if affected_elements is not None:
+            self.affected_elements = affected_elements
         self.change_state(new_state, 100)
         self.unlock()
 
@@ -1380,6 +1386,9 @@ class LMI_AffectedJobElement(CIMProvider2):
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "AffectingElement not found.")
 
+        if job.affected_elements is None:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
+                    "The AffectingElement has no AffectedElement.")
         if model['AffectedElement'] not in job.affected_elements:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "AffectedElement is not associated to AffectingElement.")
@@ -1391,6 +1400,8 @@ class LMI_AffectedJobElement(CIMProvider2):
         """Enumerate instances."""
         model.path.update({'AffectingElement': None, 'AffectedElement': None})
         for job in self.job_manager.jobs.values():
+            if job.affected_elements is None:
+                continue
             for element in job.affected_elements:
                 model['AffectingElement'] = job.get_name()
                 model['AffectedElement'] = element
