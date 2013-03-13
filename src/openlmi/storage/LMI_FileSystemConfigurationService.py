@@ -264,6 +264,160 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
                 affected_elements=[format_name, ],
                 error=None)
 
+    @cmpi_logging.trace_method
+    def cim_method_deletefilesystem(self, env, object_name,
+                                    param_waittime=None,
+                                    param_thefilesystem=None,
+                                    param_inuseoptions=None):
+        """Implements LMI_FileSystemConfigurationService.DeleteFileSystem()
+
+        Start a job to delete a FileSystem. If the FileSystem cannot be
+        deleted, no action will be taken, and the Return Value will be
+        4097/0x1001. If the method completed successfully and did not
+        require a long-running ConcreteJob, it will return 0. If
+        4096/0x1000 is returned, a ConcreteJob will be started to delete
+        the FileSystem. A Reference to the ConcreteJob will be returned in
+        the output parameter Job.
+        
+        Keyword arguments:
+        env -- Provider Environment (pycimmb.ProviderEnvironment)
+        object_name -- A pywbem.CIMInstanceName or pywbem.CIMCLassName 
+            specifying the object on which the method DeleteFileSystem() 
+            should be invoked.
+        param_waittime --  The input parameter WaitTime (type pywbem.Uint32) 
+            An integer that indicates the time (in seconds) that the
+            provider must wait before deleting this FileSystem. If
+            WaitTime is not zero, the method will create a job, if
+            supported by the provider, and return immediately. If the
+            provider does not support asynchronous jobs, there is a
+            possibility that the client could time-out before the job is
+            completed.  The combination of InUseOptions = '4' and WaitTime
+            ='0' (the default) is interpreted as 'Wait (forever) until
+            Quiescence, then Delete Filesystem' and will be performed
+            asynchronously if possible.
+            
+        param_thefilesystem --  The input parameter TheFileSystem (type REF (pywbem.CIMInstanceName(classname='CIM_ManagedElement', ...)) 
+            An element or association that uniquely identifies the
+            FileSystem to be deleted.
+            
+        param_inuseoptions --  The input parameter InUseOptions (type pywbem.Uint16 self.Values.DeleteFileSystem.InUseOptions) 
+            An enumerated integer that specifies the action to take if the
+            FileSystem is still in use when this request is made.
+            
+
+        Returns a two-tuple containing the return value (type pywbem.Uint32 self.Values.DeleteFileSystem)
+        and a list of CIMParameter objects representing the output parameters
+
+        Output parameters:
+        Job -- (type REF (pywbem.CIMInstanceName(classname='CIM_ConcreteJob', ...)) 
+            Reference to the job (may be null if job completed).
+            
+
+        Possible Errors:
+        CIM_ERR_ACCESS_DENIED
+        CIM_ERR_INVALID_PARAMETER (including missing, duplicate, 
+            unrecognized or otherwise incorrect parameters)
+        CIM_ERR_NOT_FOUND (the target CIM Class or instance does not 
+            exist in the specified namespace)
+        CIM_ERR_METHOD_NOT_AVAILABLE (the CIM Server is unable to honor 
+            the invocation request)
+        CIM_ERR_FAILED (some other unspecified error occurred)
+
+        """
+        self.check_instance(object_name)
+
+        # remember input parameters for Job
+        input_arguments = {
+                'WaitTime' : pywbem.CIMProperty(name='WaitTime',
+                        type='uint32',
+                        value=param_waittime),
+                'TheFileSystem' : pywbem.CIMProperty(name='TheFileSystem',
+                        type='reference',
+                        value=param_thefilesystem),
+                'InUseOptions' : pywbem.CIMProperty(name='InUseOptions',
+                        type='uint16',
+                        value=param_inuseoptions),
+        }
+
+        if param_waittime is not None:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
+                    "Parameter WaitTime is not supported.")
+        if param_inuseoptions is not None:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
+                    "Parameter InUseOptions is not supported.")
+        if param_thefilesystem is None:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Parameter TheFileSystem must be specified.")
+        provider = self.provider_manager.get_provider_for_format_name(
+                param_thefilesystem)
+        if not provider:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
+                    "Unknown TheFileSystem class.")
+        fmt = provider.get_format_for_name(param_thefilesystem)
+        if not fmt:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
+                    "Unknown TheFileSystem instance.")
+
+        # prepare job
+        job = Job(
+                job_manager=self.job_manager,
+                job_name="DELETE FS " + fmt.type + " ON " + fmt.device,
+                input_arguments=input_arguments,
+                method_name='DeleteFileSystem',
+                affected_elements=param_thefilesystem,
+                owning_element=self._get_instance_name())
+        job.set_execute_action(self._delete_fs,
+                job, param_thefilesystem)
+
+        # prepare output arguments
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        retvals = self.Values.LMI_CreateFileSystem
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+        return (retvals.Method_Parameters_Checked___Job_Started,
+                outparams)
+
+    @cmpi_logging.trace_method
+    def _delete_fs(self, job, param_thefilesystem):
+        """
+            Delete a filesystem This method is called from JobManager worker
+            thread.
+        """
+        provider = self.provider_manager.get_provider_for_format_name(
+                param_thefilesystem)
+        if not provider:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
+                    "Unknown TheFileSystem class.")
+        fmt = provider.get_format_for_name(param_thefilesystem)
+        if not fmt:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
+                    "Unknown TheFileSystem instance, the filesystem is "\
+                    " probably already deleted.")
+
+        device = self.storage.devicetree.getDeviceByPath(fmt.device,
+                preferLeaves=False)
+        if device is None:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
+                    "Cannot find device for the format, it is"\
+                    " probably already deleted.")
+
+        action = blivet.ActionDestroyFormat(device)
+        openlmi.storage.util.storage.do_storage_action(
+                self.storage, action)
+
+        ret = self.Values.DeleteFileSystem.Job_Completed_with_No_Error
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=ret,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments=[],
+                affected_elements=[],
+                error=None)
+
     class Values(ServiceProvider.Values):
         class LMI_CreateFileSystem(object):
             Job_Completed_with_No_Error = pywbem.Uint32(0)
@@ -300,3 +454,23 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
                 JFS = pywbem.Uint16(32771)
                 TMPFS = pywbem.Uint16(32772)
                 VFAT = pywbem.Uint16(32773)
+        class DeleteFileSystem(object):
+            Job_Completed_with_No_Error = pywbem.Uint32(0)
+            Not_Supported = pywbem.Uint32(1)
+            Unknown = pywbem.Uint32(2)
+            Timeout = pywbem.Uint32(3)
+            Failed__Unspecified_Reasons = pywbem.Uint32(4)
+            Invalid_Parameter = pywbem.Uint32(5)
+            FileSystem_in_use__Failed = pywbem.Uint32(6)
+            # DMTF_Reserved = ..
+            # Method_Parameters_Checked___Job_Started = 0x1000
+            # Method_Reserved = 0x1001..0x7FFF
+            # Vendor_Specific = 0x8000..
+            class InUseOptions(object):
+                Do_Not_Delete = pywbem.Uint16(2)
+                Wait_for_specified_time__then_Delete_Immediately = \
+                    pywbem.Uint16(3)
+                Attempt_Quiescence_for_specified_time__then_Delete_Immediately \
+ = pywbem.Uint16(4)
+                # DMTF_Reserved = ..
+                # Vendor_Defined = 0x1000..0xFFFF
