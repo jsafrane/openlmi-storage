@@ -455,18 +455,13 @@ class Job(object):
                 namespace=self.job_manager.namespace)
         inst = pywbem.CIMInstance(
                 classname="CIM_InstMethodCall",
-                path=path,
-                properties={
-                        'MethodName' : self.method_name,
-                        'MethodParameters' : pywbem.CIMProperty(
-                                name="MethodParameters",
-                                type='instance',
-                                value=self._get_method_params(False)),
-                        'PreCall' : True,
-                })
+                path=path)
         src_instance = self._get_cim_instance()
         inst['SourceInstance'] = src_instance
         inst['SourceInstanceModelPath'] = str(src_instance.path)
+        inst['MethodName'] = self.method_name
+        inst['MethodParameters'] = self._get_method_params(True)
+        inst['PreCall'] = True
         return inst
 
     @cmpi_logging.trace_method
@@ -484,20 +479,19 @@ class Job(object):
                 namespace=self.job_manager.namespace)
         inst = pywbem.CIMInstance(
                 classname="CIM_InstMethodCall",
-                path=path,
-                properties={
-                        'MethodName' : self.method_name,
-                        'MethodParameters' : self._get_method_params(True),
-                        'PreCall' : False
-        })
+                path=path)
+
         src_instance = self._get_cim_instance()
         inst['SourceInstance'] = src_instance
         inst['SourceInstanceModelPath'] = str(src_instance.path)
+        inst['MethodName'] = self.method_name
+        inst['MethodParameters'] = self._get_method_params(True)
+        inst['PreCall'] = False
 
         if self.return_value_type is not None:
             inst['ReturnValueType'] = self.return_value_type
         if self.return_value is not None:
-            inst['ReturnValue'] = self.return_value
+            inst['ReturnValue'] = str(self.return_value)
         if self.error is not None:
             inst['Error'] = self.error
         return inst
@@ -518,17 +512,21 @@ class Job(object):
         
         :rtype: CIMInstance of __MethodParameters.
         """
+        # TODO: this is workaround for bug #920763, use __MethodParameters
+        # when it's fixed
+        clsname = "CIM_ManagedElement"
         path = pywbem.CIMInstanceName(
-                classname="__MethodParameters",
+                classname=clsname,
                 namespace=self.job_manager.namespace,
                 keybindings={})
-        inst = pywbem.CIMInstance(classname="__MethodParameters", path=path)
+        inst = pywbem.CIMInstance(classname=clsname, path=path)
         for (name, value) in self.input_arguments.iteritems():
             inst[name] = value
         if output:
             # overwrite any input parameter
-            for (name, value) in self.output_arguments.iteritems():
-                inst[name] = value
+            if self.output_arguments:
+                for (name, value) in self.output_arguments.iteritems():
+                    inst[name] = value
         return inst
 
     # pylint: disable-msg=R0903
