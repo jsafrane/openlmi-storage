@@ -203,7 +203,7 @@ class LMI_MDRAIDStorageExtent(ExtentProvider, SettingHelper):
         storage.log_storage_call("DELETE MDRAID",
                 {'device': device})
         action = blivet.deviceaction.ActionDestroyDevice(device)
-        storage.do_storage_action(self.storage, action)
+        storage.do_storage_action(self.storage, [action])
 
     class Values(ExtentProvider.Values):
         class Level(object):

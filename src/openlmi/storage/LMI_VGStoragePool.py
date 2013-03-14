@@ -380,7 +380,7 @@ class LMI_VGStoragePool(DeviceProvider, SettingHelper):
         storage.log_storage_call("DELETE VG",
                 {'device': device})
         action = blivet.deviceaction.ActionDestroyDevice(device)
-        storage.do_storage_action(self.storage, action)
+        storage.do_storage_action(self.storage, [action])
 
 
     class Values(DeviceProvider.Values):

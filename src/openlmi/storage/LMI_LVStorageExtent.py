@@ -180,4 +180,4 @@ class LMI_LVStorageExtent(ExtentProvider, SettingHelper):
     def do_delete_instance(self, device):
         cmpi_logging.logger.info("DELETE LV: %s" % (device.path))
         action = blivet.deviceaction.ActionDestroyDevice(device)
-        storage.do_storage_action(self.storage, action)
+        storage.do_storage_action(self.storage, [action])
