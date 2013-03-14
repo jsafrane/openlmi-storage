@@ -188,6 +188,14 @@ class FormatProvider(BaseProvider):
         model['ElementName'] = fmt.device
         return model
 
+    def get_devices(self, device, _fmt):
+        """
+        Return all devices, on which the format resides.
+        Usually there is only one device, but btrfs may provide more.
+        """
+        return [device]
+
+
     class Values(object):
         class FormatType(object):
             Swap = pywbem.Uint16(1)
@@ -222,12 +230,14 @@ class LMI_ResidesOnExtent(BaseProvider):
             if not provider:
                 continue
             fmtname = provider.get_name_for_format(device, fmt)
-            devname = self.provider_manager.get_name_for_device(device)
-            if not devname:
-                continue
-            model['Dependent'] = fmtname
-            model['Antecedent'] = devname
-            yield model
+            devices = provider.get_devices(device, fmt)
+            for device in devices:
+                devname = self.provider_manager.get_name_for_device(device)
+                if not devname:
+                    continue
+                model['Dependent'] = fmtname
+                model['Antecedent'] = devname
+                yield model
 
     @cmpi_logging.trace_method
     def get_instance(self, env, model):
@@ -241,19 +251,19 @@ class LMI_ResidesOnExtent(BaseProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Cannot find Antecedent device.")
 
-        fmt = device.format
-        if not fmt:
-            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
-                    "The Antecedent device has no format.")
-
-        fmtprovider = self.provider_manager.get_provider_for_format(
-                device, fmt)
+        fmtprovider = self.provider_manager.get_provider_for_format_name(
+                fmtname)
         if not fmtprovider:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "The Antecedent device has unknown format.")
 
-        real_fmtname = fmtprovider.get_name_for_format(device, fmt)
-        if real_fmtname != fmtname:
+        fmt = fmtprovider.get_format_for_name(fmtname)
+        if not fmt:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
+                    "The Antecedent device has unknown format.")
+
+        fmt_devices = fmtprovider.get_devices(device, fmt)
+        if device not in fmt_devices:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "The Antecedent device has different format.")
         return model
