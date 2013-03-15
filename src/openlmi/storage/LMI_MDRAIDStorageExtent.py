@@ -49,7 +49,7 @@ class LMI_MDRAIDStorageExtent(ExtentProvider, SettingHelper):
             StorageDevice class.
         """
         if  isinstance(device, blivet.devices.MDRaidArrayDevice):
-            return True
+            return device.status
         return False
 
     @cmpi_logging.trace_method
@@ -58,7 +58,8 @@ class LMI_MDRAIDStorageExtent(ExtentProvider, SettingHelper):
             Enumerate all StorageDevices, that this provider provides.
         """
         for device in self.storage.mdarrays:
-            yield device
+            if device.status:
+                yield device
 
     @cmpi_logging.trace_method
     def get_redundancy(self, device):
@@ -122,7 +123,8 @@ class LMI_MDRAIDStorageExtent(ExtentProvider, SettingHelper):
             as Setting instances.
         """
         for md in self.storage.mdarrays:
-            yield self._get_setting_for_device(md, setting_provider)
+            if md.status:
+                yield self._get_setting_for_device(md, setting_provider)
 
     @cmpi_logging.trace_method
     def get_setting_for_id(self, setting_provider, instance_id):

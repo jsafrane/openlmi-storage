@@ -37,7 +37,8 @@ class LMI_MDRAIDBasedOn(BasedOnProvider):
             Dependent ones, i.e. all devices, which do not have any
             specialized BasedOn class
         """
-        return self.storage.mdarrays
+        active_arrays = [dev for dev in self.storage.mdarrays if dev.status]
+        return active_arrays
 
     @cmpi_logging.trace_method
     def get_instance(self, env, model, device=None, base=None):
