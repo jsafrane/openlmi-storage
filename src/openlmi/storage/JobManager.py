@@ -656,6 +656,7 @@ class JobManager(object):
 
         # Start the worker thread (don't forget to register it at CIMOM)
         self.worker = threading.Thread(target=self._worker_main)
+        self.worker.daemon=True
         self.worker.start()
 
         # Various classnames for job-related classes, with correct infixes.
