@@ -54,7 +54,8 @@ figures: pic/partitions.png \
     pic/intro-service.svg \
     pic/partition-instance.svg \
     pic/raid5-instance.svg \
-    pic/lvm-instance.svg
+    pic/lvm-instance.svg \
+    pic/fs-instance.svg
 
 mof:
 	make -C mof

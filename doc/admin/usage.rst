@@ -18,5 +18,6 @@ No SMI-S knowledge is necessary, but it can help a lot.
    usage-partitioning
    usage-raid
    usage-lvm
+   usage-fs
 
 
