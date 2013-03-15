@@ -123,7 +123,6 @@ def do_storage_action(storage, actions):
     """
         Perform array Anaconda DeviceActions on given Storage instance.
     """
-    do_raid = False
     do_partitioning = False
 
     for action in actions:
@@ -135,8 +134,6 @@ def do_storage_action(storage, actions):
                         blivet.deviceaction.ActionCreateDevice)):
             do_partitioning = True
 
-        if isinstance(action.device, blivet.devices.MDRaidArrayDevice):
-            do_raid = True
         storage.devicetree.registerAction(action)
     try:
         if do_partitioning:
@@ -151,17 +148,6 @@ def do_storage_action(storage, actions):
                     blivet.deviceaction.ActionDestroyDevice):
                 cmpi_logging.logger.trace_verbose(
                         "Result: " + repr(action.device))
-            if do_raid:
-                # work around blivet not destroying MD metadata
-                if isinstance(action, blivet.deviceaction.ActionDestroyDevice):
-                    for device in action.device.parents:
-                        subprocess.call([
-                                'dd',
-                                'if=/dev/zero',
-                                'of=' + device.path,
-                                'bs=1024',
-                                'count=1024'])
-
 
     finally:
         # workaround for bug #891971
