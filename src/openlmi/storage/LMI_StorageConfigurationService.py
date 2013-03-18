@@ -154,7 +154,7 @@ class LMI_StorageConfigurationService(ServiceProvider):
             if newsize != oldsize:
                 action = blivet.deviceaction.ActionResizeDevice(
                         device, newsize)
-                storage.do_storage_action(self.storage, action)
+                storage.do_storage_action(self.storage, [action])
                 self.storage.devicetree.processActions(dryRun=False)
                 self.storage.reset()
 
@@ -188,7 +188,7 @@ class LMI_StorageConfigurationService(ServiceProvider):
 
         lv = self.storage.newLV(**args)
         action = blivet.deviceaction.ActionCreateDevice(lv)
-        storage.do_storage_action(self.storage, action)
+        storage.do_storage_action(self.storage, [action])
 
         newsize = lv.size * units.MEGABYTE
         outparams = [
@@ -439,7 +439,7 @@ class LMI_StorageConfigurationService(ServiceProvider):
 
         vg = self.storage.newVG(**args)
         action = blivet.ActionCreateDevice(vg)
-        storage.do_storage_action(self.storage, action)
+        storage.do_storage_action(self.storage, [action])
 
         newsize = vg.size * units.MEGABYTE
         outparams = [
@@ -711,7 +711,7 @@ class LMI_StorageConfigurationService(ServiceProvider):
 
         raid = self.storage.newMDArray(**args)
         action = blivet.ActionCreateDevice(raid)
-        storage.do_storage_action(self.storage, action)
+        storage.do_storage_action(self.storage, [action])
 
         newsize = raid.size * units.MEGABYTE
         outparams = [
