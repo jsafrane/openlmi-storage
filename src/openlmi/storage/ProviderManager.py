@@ -147,6 +147,19 @@ class ProviderManager(object):
         return None
 
     @cmpi_logging.trace_method
+    def get_provider_for_format_name(self, object_name):
+        """
+            Return provider for given CIM InstanceName of LMI_FileSystemFormat
+            subclass.
+            Return None if no such provider is registered.
+        """
+        for provider in self.format_providers:
+            if provider.classname == object_name.classname:
+                return provider
+        return None
+
+
+    @cmpi_logging.trace_method
     def get_setting_for_id(self, instance_id, setting_classname=None):
         """
             Return Setting instance for given InstanceID.

@@ -224,6 +224,62 @@ class LMI_FileSystemConfigurationService : CIM_FileSystemConfigurationService
     [ Implemented(true) ] uint16 PrimaryStatus;
     [ Implemented(true) ] string StartMode;
     [ Implemented(true) ] boolean Started;
+
+    [Implemented(true), Description ( 
+          "Start a job to delete a FileSystem. If the FileSystem "
+          "cannot be deleted, no action will be taken, and the "
+          "Return Value will be 4097/0x1001. If the method "
+          "completed successfully and did not require a "
+          "long-running ConcreteJob, it will return 0. If "
+          "4096/0x1000 is returned, a ConcreteJob will be started "
+          "to delete the FileSystem. A Reference to the ConcreteJob "
+          "will be returned in the output parameter Job." ), 
+       ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "0x1000", 
+          "0x1001..0x7FFF", "0x8000.." }, 
+       Values { "Job Completed with No Error", "Not Supported", 
+          "Unknown", "Timeout", "Failed, Unspecified Reasons", 
+          "Invalid Parameter", "FileSystem in use, Failed", 
+          "DMTF Reserved", 
+          "Method Parameters Checked - Job Started", 
+          "Method Reserved", "Vendor Specific" }]
+   uint32 DeleteFileSystem(
+         [IN ( false ), OUT, Description ( 
+             "Reference to the job (may be null if job completed)."
+              )]
+      CIM_ConcreteJob REF Job, 
+         [IN, Description ( 
+             "An element or association that uniquely identifies "
+             "the FileSystem to be deleted." )]
+      CIM_ManagedElement REF TheFileSystem, 
+         [IN, Description ( 
+             "An enumerated integer that specifies the action to "
+             "take if the FileSystem is still in use when this "
+             "request is made.\n" 
+             "This option is not supported by OpenLMI."), 
+          ValueMap { "2", "3", "4", "..", "0x1000..0xFFFF" }, 
+          Values { "Do Not Delete", 
+             "Wait for specified time, then Delete Immediately", 
+             "Attempt Quiescence for specified time, then Delete Immediately", 
+             "DMTF Reserved", "Vendor Defined" }]
+      uint16 InUseOptions, 
+         [IN, Description ( 
+             "An integer that indicates the time (in seconds) "
+             "that the provider must wait before deleting this "
+             "FileSystem. If WaitTime is not zero, the method "
+             "will create a job, if supported by the provider, "
+             "and return immediately. If the provider does not "
+             "support asynchronous jobs, there is a possibility "
+             "that the client could time-out before the job is "
+             "completed. \n"
+             "The combination of InUseOptions = \'4\' and "
+             "WaitTime =\'0\' (the default) is interpreted as "
+             "\'Wait (forever) until Quiescence, then Delete "
+             "Filesystem\' and will be performed asynchronously "
+             "if possible.\n"
+             "This option is not supported by OpenLMI."), 
+          Units ( "seconds" ), 
+          PUnit ( "second" )]
+      uint32 WaitTime);
 };
 
 
