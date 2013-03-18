@@ -316,14 +316,12 @@ class LocalFileSystemProvider(FormatProvider, SettingHelper):
         model['CaseSensitive'] = True
         model['CasePreserved'] = True
         model['PersistenceType'] = self.Values.PersistenceType.Persistent
-        if fmt.label:
-            model['ElementName'] = fmt.label
+        model['ElementName'] = fmt.device
         uuid = self.get_uuid(device, fmt)
         if uuid:
-            model['ElementName'] = uuid
-        else:
-            model['ElementName'] = fmt.device
-
+            model['UUID'] = uuid
+        if fmt.label:
+            model['ElementName'] = fmt.label
         return model
 
     @cmpi_logging.trace_method

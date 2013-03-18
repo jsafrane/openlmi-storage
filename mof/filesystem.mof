@@ -7,6 +7,9 @@ class LMI_LocalFileSystem : CIM_LocalFileSystem
         " Usually UUID.")]
     string Name;
 
+    [ Implemented(true), Description("UUID of the filesystem.")]
+    string UUID;
+
     [Implemented(true)] uint16 OperationalStatus[];
     [Implemented(true)] string Root;
     [Implemented(true)] uint64 BlockSize;
