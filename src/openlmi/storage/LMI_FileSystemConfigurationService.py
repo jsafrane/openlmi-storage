@@ -250,8 +250,9 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
                 self.storage, action)
         fmtprovider = self.provider_manager.get_provider_for_format(
                 devices[0], fmt)
+        format_name = fmtprovider.get_name_for_format(devices[0], fmt)
         outparams = {
-            'theelement': fmtprovider.get_name_for_format(devices[0], format)
+            'theelement': format_name
         }
 
         ret = self.Values.LMI_CreateFileSystem.Job_Completed_with_No_Error
@@ -260,6 +261,7 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
                 return_value=ret,
                 return_type=Job.ReturnValueType.Uint32,
                 output_arguments=outparams,
+                affected_elements=[format_name, ],
                 error=None)
 
     class Values(ServiceProvider.Values):
