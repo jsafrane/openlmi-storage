@@ -86,8 +86,8 @@ class FormatProvider(BaseProvider):
     @cmpi_logging.trace_method
     def get_format_for_id(self, name):
         """
-            Return DeviceFormat for given Name property of CIMInstance.
-            Return None if no such format exist.
+            Return tuple (StorageDevice, DeviceFormat) for given Name property
+            of CIMInstance. Return None if no such format exist.
             This is reverse function to get_format_id().
             Subclasses do not need to override this method if they do not
             override get_format_id().
@@ -103,7 +103,7 @@ class FormatProvider(BaseProvider):
             return None
         if not device:
             return None
-        return device.format
+        return (device, device.format)
 
     @cmpi_logging.trace_method
     def get_name_for_format(self, device, fmt):
@@ -139,8 +139,8 @@ class FormatProvider(BaseProvider):
     @cmpi_logging.trace_method
     def get_format_for_name(self, instance_name):
         """
-            Return DeviceFormat instance for given CIMInstanceName.
-            Return None if no such instance_name exists.
+            Return tuple (StorageDevice, DeviceFormat) instance for given
+            CIMInstanceName. Return None if no such instance_name exists.
         """
         if instance_name['CSName'] != self.config.system_name:
             return None
@@ -161,7 +161,7 @@ class FormatProvider(BaseProvider):
             just check if the instance exists.
         """
         if not fmt:
-            fmt = self.get_format_for_name(model)
+            (device, fmt) = self.get_format_for_name(model)
         if not fmt:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Cannot find the format.")

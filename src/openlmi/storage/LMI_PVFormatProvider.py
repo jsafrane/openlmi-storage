@@ -47,7 +47,7 @@ class LMI_PVFormatProvider(FormatProvider):
         model = super(LMI_PVFormatProvider, self).get_instance(
                 env, model, fmt)
         if not fmt:
-            fmt = self.get_format_for_id(model['Name'])
+            (device, fmt) = self.get_format_for_id(model['Name'])
         print fmt
         if fmt.uuid:
             model['UUID'] = fmt.uuid
