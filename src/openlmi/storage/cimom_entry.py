@@ -147,6 +147,8 @@ def get_providers(env):
     config.load()
     log_manager.set_config(config)
 
+    cmpi_logging.logger.info("Provider init.")
+
     global indication_manager
     indication_manager = IndicationManager(env, "Storage", config.namespace)
 
@@ -378,3 +380,13 @@ def enable_indications(env):
 def disable_indications(env):
     """ CIMOM callback."""
     indication_manager.disable_indications(env)
+
+def can_unload(_env):
+    """ CIMOM callback."""
+    cmpi_logging.logger.trace_info("can_unload called")
+    return True
+
+def shutdown(_env):
+    """ CIMOM callback."""
+    cmpi_logging.logger.info("Provider shutdown.")
+    return True
