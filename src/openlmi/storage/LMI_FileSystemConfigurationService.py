@@ -353,7 +353,7 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
         if not provider:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Unknown TheFileSystem class.")
-        fmt = provider.get_format_for_name(param_thefilesystem)
+        (device, fmt) = provider.get_format_for_name(param_thefilesystem)
         if not fmt:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Unknown TheFileSystem instance.")
@@ -392,17 +392,10 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
         if not provider:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Unknown TheFileSystem class.")
-        fmt = provider.get_format_for_name(param_thefilesystem)
+        (device, fmt) = provider.get_format_for_name(param_thefilesystem)
         if not fmt:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Unknown TheFileSystem instance, the filesystem is "\
-                    " probably already deleted.")
-
-        device = self.storage.devicetree.getDeviceByPath(fmt.device,
-                preferLeaves=False)
-        if device is None:
-            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
-                    "Cannot find device for the format, it is"\
                     " probably already deleted.")
 
         action = blivet.ActionDestroyFormat(device)

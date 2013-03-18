@@ -307,7 +307,7 @@ class LocalFileSystemProvider(FormatProvider, SettingHelper):
             just check if the instance exists.
         """
         if not fmt:
-            fmt = self.get_format_for_name(model)
+            (device, fmt) = self.get_format_for_name(model)
         if not fmt:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Cannot find the format.")

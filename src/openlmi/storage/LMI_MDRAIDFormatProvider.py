@@ -47,6 +47,6 @@ class LMI_MDRAIDFormatProvider(FormatProvider):
         model = super(LMI_MDRAIDFormatProvider, self).get_instance(
                 env, model, fmt)
         if not fmt:
-            fmt = self.get_format_for_id(model['Name'])
+            (device, fmt) = self.get_format_for_id(model['Name'])
         model['MDUUID'] = fmt.mdUuid
         return model
