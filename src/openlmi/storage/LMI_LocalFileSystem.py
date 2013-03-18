@@ -43,10 +43,17 @@ class LMI_LocalFileSystem(LocalFileSystemProvider):
         if not isinstance(fmt, blivet.formats.fs.FS):
             return False
 
-        # TODO: implement btrfs volumes
-        if isinstance(device, blivet.devices.BTRFSVolumeDevice) or \
-           isinstance(device, blivet.devices.BTRFSSubVolumeDevice):
+        # TODO: implement btrfs subvolumes
+        if isinstance(device, blivet.devices.BTRFSSubVolumeDevice):
             return False
+
+        # For BTRFS, we show LMI_LocalFileSystem for each BTRFSVolumeDevice
+        if (isinstance(fmt, blivet.formats.fs.BTRFS)
+                and not isinstance(device, blivet.devices.BTRFSVolumeDevice)):
+            # This is not BTRFSVolumeDevice
+            return False
+        cmpi_logging.logger.error("format: %s" % str(fmt))
+        cmpi_logging.logger.error("device: %s" % str(device))
 
         # TODO: skip formats with its own classes (currently none)
 
@@ -54,3 +61,36 @@ class LMI_LocalFileSystem(LocalFileSystemProvider):
         if fmt.type is None:
             return False
         return True
+
+    def get_devices(self, device, fmt):
+        if isinstance(fmt, blivet.formats.fs.BTRFS):
+            if isinstance(device, blivet.devices.BTRFSSubVolumeDevice):
+                # TODO: implement subvolumes
+                return []
+            if not isinstance(device, blivet.devices.BTRFSVolumeDevice):
+                # We have real block device. Find the BTRFSVolume device for
+                # it - it must be its only child.
+                children = self.storage.devicetree.getChildren(device)
+                if len(children) != 1:
+                    cmpi_logging.logger.trace_warn("Failed to find btrfs volume"
+                            " device on %s: %s" % (str(device), str(children)))
+                    return []
+                device = children[0]
+            if isinstance(device, blivet.devices.BTRFSVolumeDevice):
+                return device.parents
+            else:
+                cmpi_logging.logger.trace_warn("Failed to find btrfs volume"
+                        " device on %s" % (str(device)))
+                return []
+        return [device]
+
+    @cmpi_logging.trace_method
+    def get_uuid(self, device, fmt):
+        # We need to override it for BTRFS, it's uuid is in BTRFSVolumeDevice,
+        # not it format
+        if (isinstance(fmt, blivet.formats.fs.BTRFS)
+            and isinstance(device, blivet.devices.BTRFSVolumeDevice)):
+            uuid = device.uuid
+            if uuid:
+                return uuid
+        return super(LMI_LocalFileSystem, self).get_uuid(device, fmt)

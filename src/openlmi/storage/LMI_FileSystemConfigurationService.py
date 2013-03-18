@@ -143,9 +143,10 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
                     + extent['DeviceID'])
             devices.append(device)
         if len(devices) > 1:
-            raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
-                    "Creation of filesystems on multiple devices is not"
-                    " yet supported.")
+            if (param_filesystemtype
+                    != self.Values.LMI_CreateFileSystem.FileSystemType.BTRFS):
+                raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
+                        "Selected filesystem supports only one device.")
         if len(devices) < 1:
             raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
                     "At least one InExtent must be specified")
@@ -244,13 +245,34 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
                 raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                         "One of the devices disappeared: " + devname)
             devices.append(device)
-        action = blivet.ActionCreateFormat(devices[0],
-                format=fmt)
+        if fmt.type == 'btrfs':
+            # BTRFS is different beast, we must create BTRFSVolumeDevice
+            for device in devices:
+                device.format = blivet.formats.getFormat('btrfs')
+            volume = self.storage.newBTRFS(
+                    fmt_args={'label': label},
+                    parents=devices)
+            action = blivet.ActionCreateDevice(volume)
+        else:
+            # create simple CreateFormat action
+            action = blivet.ActionCreateFormat(devices[0],
+                    format=fmt)
+
         openlmi.storage.util.storage.do_storage_action(
                 self.storage, [action])
+
+        # We must locate the format manually, the storage was reset
+        # TODO: remove when reset() is not necessary
+        device = self.storage.devicetree.getDeviceByPath(devices[0].path)
+        if device:
+            fmt = device.format
+        else:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Cannot locate new format, was it removed?")
+
         fmtprovider = self.provider_manager.get_provider_for_format(
-                devices[0], fmt)
-        format_name = fmtprovider.get_name_for_format(devices[0], fmt)
+                device, fmt)
+        format_name = fmtprovider.get_name_for_format(device, fmt)
         outparams = {
             'theelement': format_name
         }
@@ -398,9 +420,17 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
                     "Unknown TheFileSystem instance, the filesystem is "\
                     " probably already deleted.")
 
-        action = blivet.ActionDestroyFormat(device)
+        actions = []
+        if isinstance(device, blivet.devices.BTRFSVolumeDevice):
+            # delete the volume device first
+            actions.append(blivet.ActionDestroyDevice(device))
+            for parent in device.parents:
+                # and destroy all formats
+                actions.append(blivet.ActionDestroyFormat(parent))
+        else:
+            actions.append(blivet.ActionDestroyFormat(device))
         openlmi.storage.util.storage.do_storage_action(
-                self.storage, [action])
+                self.storage, actions)
 
         ret = self.Values.DeleteFileSystem.Job_Completed_with_No_Error
         job.finish_method(
