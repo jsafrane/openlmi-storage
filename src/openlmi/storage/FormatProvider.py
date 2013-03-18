@@ -67,17 +67,23 @@ class FormatProvider(BaseProvider):
         return False
 
     @cmpi_logging.trace_method
+    def get_uuid(self, device, fmt):
+        """
+        Return UUID of the format or None when it does not exist.
+        """
+        try:
+            return fmt.uuid
+        except AttributeError:
+            return None
+
+    @cmpi_logging.trace_method
     def get_format_id(self, device, fmt):
         """
             Return LMI_DataFormat.Name. The name should be unique and stable
             across reboots or reconfigurations. UUID is used, subclasses
             do not need to override this method.
         """
-        try:
-            uuid = fmt.uuid
-        except AttributeError:
-            uuid = None
-
+        uuid = self.get_uuid(device, fmt)
         if uuid:
             return "UUID=" + uuid
 
