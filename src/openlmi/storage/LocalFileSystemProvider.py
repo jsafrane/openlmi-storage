@@ -318,8 +318,9 @@ class LocalFileSystemProvider(FormatProvider, SettingHelper):
         model['PersistenceType'] = self.Values.PersistenceType.Persistent
         if fmt.label:
             model['ElementName'] = fmt.label
-        if fmt.uuid:
-            model['ElementName'] = fmt.uuid
+        uuid = self.get_uuid(device, fmt)
+        if uuid:
+            model['ElementName'] = uuid
         else:
             model['ElementName'] = fmt.device
 
