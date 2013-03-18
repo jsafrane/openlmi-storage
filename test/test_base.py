@@ -29,6 +29,59 @@ import subprocess
 import pyudev
 import time
 import socket
+import Queue
+from twisted.internet import reactor
+from twisted.web import server, resource
+import threading
+
+class CIMListener(resource.Resource):
+    """ CIM Listener
+    """
+
+    isLeaf = 1
+
+    class ServerContextFactory(object):
+        def __init__(self, cert, key):
+            self.cert = cert
+            self.key = key
+
+        def getContext(self):
+            """Create an SSL context with a dodgy certificate."""
+
+            from OpenSSL import SSL
+            ctx = SSL.Context(SSL.SSLv23_METHOD)
+            ctx.use_certificate_file(self.cert)
+            ctx.use_privatekey_file(self.key)
+            return ctx
+
+    def __init__(self, callback,
+            http_port=5988):
+        self.callback = callback
+        self.http_port = http_port
+        site = server.Site(self)
+        if self.http_port and self.http_port > 0:
+            reactor.listenTCP(self.http_port, site)
+
+    def start(self):
+        ''' doesn't work'''
+        thread = threading.Thread(target=reactor.run,
+                kwargs={'installSignalHandlers': 0})
+        thread.start()
+
+    def stop(self):
+        reactor.stop()
+
+    def run(self):
+        reactor.run()
+
+    def render_POST(self, request):
+        tt = pywbem.parse_cim(pywbem.xml_to_tupletree(request.content.read()))
+        # Get the instance from CIM-XML, copied from
+        # http://sf.net/apps/mediawiki/pywbem/?title=Indications_Tutorial
+        insts = [x[1] for x in tt[2][2][0][2][2]]
+        for inst in insts:
+            self.callback(inst)
+        return ''
 
 class StorageTestBase(unittest.TestCase):
     """
@@ -41,6 +94,10 @@ class StorageTestBase(unittest.TestCase):
     SYSTEM_NAME = socket.getfqdn()
     DISK_CLASS = "LMI_StorageExtent"
 
+    DEFAULT_JOB_TIMEOUT = 5 # seconds
+
+    JOB_CREATED = 4096  # usual value of Method Parameters Checked - Job Started
+
     @classmethod
     def setUpClass(cls):
         cls.url = os.environ.get("LMI_CIMOM_URL", "https://localhost:5989")
@@ -52,6 +109,9 @@ class StorageTestBase(unittest.TestCase):
         cls.clean = os.environ.get("LMI_STORAGE_CLEAN", "Yes")
         cls.verbose = os.environ.get("LMI_STORAGE_VERBOSE", None)
         cls.mydir = os.path.dirname(__file__)
+        cls.indication_port = 12345
+        cls.indication_queue = Queue.Queue()
+        cls.listener = None
         print cls.mydir
         cls.disk_name = pywbem.CIMInstanceName(
                 classname=cls.DISK_CLASS,
@@ -75,8 +135,10 @@ class StorageTestBase(unittest.TestCase):
             name['DeviceID'] = device_id
             cls.partition_names.append(name)
 
+
     def setUp(self):
         self.start_udev_monitor()
+        self.subscribed = {}
 
     def start_udev_monitor(self):
         # pylint: disable-msg=W0201
@@ -193,6 +255,94 @@ class StorageTestBase(unittest.TestCase):
             if self.destroy_created():
                 self.restart_cim()
 
+        # put the class to initial state
+        # unsubscribe from indications
+        if self.subscribed:
+            for name in self.subscribed.iterkeys():
+                self.unsubscribe(name)
+            self.subscribed = {}
+        # stop listening
+        if self.listener:
+            self.listener.stop()
+            self.listener = None
+            self.indication_queue = Queue.Queue()
+
+    def subscribe(self, filter_name):
+        """
+        Create indication subscription for given filter name.
+        """
+        namespace = "root/interop"
+        if self.cimom == "tog-pegasus":
+            namespace = "root/PG_interop"
+
+        # the filter is already created, assemble its name
+        indfilter = pywbem.CIMInstanceName(
+                classname="CIM_IndicationFilter",
+                namespace=namespace,
+                keybindings={
+                       'CreationClassName': 'CIM_IndicationFilter',
+                       'SystemClassName': 'CIM_ComputerSystem',
+                       'SystemName': socket.gethostname(),
+                       'Name': filter_name})
+
+        # create destination
+        destinst = pywbem.CIMInstance('CIM_ListenerDestinationCIMXML')
+        destinst['CreationClassName'] = 'CIM_ListenerDestinationCIMXML'
+        destinst['SystemCreationClassName'] = 'CIM_ComputerSystem'
+        destinst['SystemName'] = socket.gethostname()
+        destinst['Name'] = filter_name
+        destinst['Destination'] = "http://localhost:%d" % (self.indication_port)
+        cop = pywbem.CIMInstanceName('CIM_ListenerDestinationCIMXML')
+        cop.keybindings = { 'CreationClassName':'CIM_ListenerDestinationCIMXML',
+                'SystemClassName':'CIM_ComputerSystem',
+                'SystemName':socket.gethostname(),
+                'Name':filter_name }
+        cop.namespace = namespace
+        destinst.path = cop
+        destname = self.wbemconnection.CreateInstance(destinst)
+
+        # create the subscription
+        subinst = pywbem.CIMInstance('CIM_IndicationSubscription')
+        subinst['Filter'] = indfilter
+        subinst['Handler'] = destname
+        cop = pywbem.CIMInstanceName('CIM_IndicationSubscription')
+        cop.keybindings = { 'Filter':indfilter,
+                'Handler':destname }
+        cop.namespace = namespace
+        subinst.path = cop
+        subscription = self.wbemconnection.CreateInstance(subinst)
+        self.subscribed[filter_name] = [subscription, destname]
+
+        # start listening
+        if not self.listener:
+            self._start_listening()
+        return subscription
+
+    def unsubscribe(self, filter_name):
+        """
+        Unsubscribe fron given filter.
+        """
+        _list = self.subscribed[filter_name]
+        for instance in _list:
+            self.wbemconnection.DeleteInstance(instance)
+
+    def _start_listening(self):
+        """ Start listening for incoming indications. """
+        self.listener = CIMListener(
+                callback=self._process_indication,
+                http_port=self.indication_port)
+        self.listener.start()
+
+    def _process_indication(self, indication):
+        """ Callback to process one indication."""
+        self.indication_queue.put(indication)
+
+    def get_indication(self, timeout):
+        """ Wait for an indication for given nr. of seconds and return it."""
+        indication = self.indication_queue.get(timeout=timeout)
+        self.indication_queue.task_done()
+        return indication
+
     def _check_redundancy(self, extent, setting,
             data_redundancy=None,
             stripe_legtht=None,
@@ -242,7 +392,64 @@ class StorageTestBase(unittest.TestCase):
         if nspof is not None:
             self.assertEqual(setting['NoSinglePointOfFailure'], nspof)
 
+    def finish_job(self, jobname, return_constructor=int,
+            affected_output_name=None):
+        """
+        Wait until the job finishes and return (ret, outparams) as if
+        InvokeMethod without a job was returned.
+        
+        It's hard to reconstruct these outparams, since the embedded instances/
+        ojects do not work in our CIMOMS, therefore special care is needed.
+        
+        When affected_output_name is specified, this methods finds the first
+        element associated to the job using LMI_AffestedStorageJobElement and
+        puts it into oputparams as affected_output_name entry.
+        
+        :param jobname: (``CIMInstanceName``) Name of the job.
+        :param return_constructor: (function) Function, which converts
+            string to the right type, for example int.
+        :param affected_output_name: (``string``) If the output parameter of
+            the method can discovered using LMI_<name>AffectedMethodElement
+            association, this is the name of output parameter, which corresponds
+            to this affected element. Blah blah blah
+        """
+        # Use busy loop for now
+        # TODO: rework to something sane
+        while True:
+            job = self.wbemconnection.GetInstance(jobname)
+            if job['JobState'] > 5:  # all states higher than 5 are final
+                break
+            time.sleep(0.1)
 
+        outparams = {}
+
+        if affected_output_name is not None:
+            element = self.wbemconnection.AssociatorNames(jobname,
+                    AssocClass="LMI_AffectedStorageJobElement")[0]
+            outparams[affected_output_name] = element
+
+        # get the MethodResult
+        result = self.wbemconnection.Associators(jobname,
+                AssocClass="LMI_AssociatedStorageJobMethodResult")[0]
+        ind = result['PostCallIndication']
+        # check for error
+        if ind['Error'] is not None:
+            err = ind['Error'][0]
+            code = err['CIMStatusCode']
+            msg = err['Message']
+            raise pywbem.CIMError(code, msg)
+
+        # convert output parameters to format returned by InvokeMethod
+        try:
+            params = ind['MethodParameters']
+        except KeyError:
+            params = {}
+        if params:
+            for (key, value) in params.iteritems():
+                outparams[key] = value
+
+        ret = return_constructor(ind['ReturnValue'])
+        return (ret, outparams)
 
 def short_tests_only():
     """
