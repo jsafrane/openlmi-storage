@@ -132,7 +132,7 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
 
         fmt = blivet.formats.getFormat('disklabel', labelType=label)
         action = blivet.deviceaction.ActionCreateFormat(device, fmt)
-        storage.do_storage_action(self.storage, action)
+        storage.do_storage_action(self.storage, [action])
 
         return self.Values.SetPartitionStyle.Success
 
@@ -463,7 +463,7 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
 
         # finally, do the dirty job
         action = blivet.deviceaction.ActionCreateDevice(partition)
-        storage.do_storage_action(self.storage, action)
+        storage.do_storage_action(self.storage, [action])
         size = partition.size * units.MEGABYTE
 
         ret = self.Values.LMI_CreateOrModifyPartition\

@@ -116,27 +116,28 @@ def remove_partition(storage, device):
         Remove PartitionDevice from system, i.e. delete a partition.
     """
     action = blivet.deviceaction.ActionDestroyDevice(device)
-    do_storage_action(storage, action)
+    do_storage_action(storage, [action])
 
 @cmpi_logging.trace_function
-def do_storage_action(storage, action):
+def do_storage_action(storage, actions):
     """
-        Perform Anaconda DeviceAction on given Storage instance.
+        Perform array Anaconda DeviceActions on given Storage instance.
     """
-
-    cmpi_logging.logger.trace_info("Running action " + str(action))
-    cmpi_logging.logger.trace_info("    on device " + repr(action.device))
-
-    do_partitioning = False
-    if (isinstance(action.device, blivet.devices.PartitionDevice)
-            and isinstance(action,
-                    blivet.deviceaction.ActionCreateDevice)):
-        do_partitioning = True
-    storage.devicetree.registerAction(action)
-
     do_raid = False
-    if isinstance(action.device, blivet.devices.MDRaidArrayDevice):
-        do_raid = True
+    do_partitioning = False
+
+    for action in actions:
+        cmpi_logging.logger.trace_info("Running action " + str(action))
+        cmpi_logging.logger.trace_info("    on device " + repr(action.device))
+
+        if (isinstance(action.device, blivet.devices.PartitionDevice)
+                and isinstance(action,
+                        blivet.deviceaction.ActionCreateDevice)):
+            do_partitioning = True
+
+        if isinstance(action.device, blivet.devices.MDRaidArrayDevice):
+            do_raid = True
+        storage.devicetree.registerAction(action)
     try:
         if do_partitioning:
             # this must be called when creating a partition
@@ -144,22 +145,24 @@ def do_storage_action(storage, action):
             blivet.partitioning.doPartitioning(storage=storage)
 
         storage.devicetree.processActions(dryRun=False)
-        if not isinstance(action,
-                blivet.deviceaction.ActionDestroyDevice):
-            cmpi_logging.logger.trace_verbose("Result: " + repr(action.device))
-        if do_raid:
-            # work around mdadm not waiting for device to appear/disappear
-            if isinstance(action,
+
+        for action in actions:
+            if not isinstance(action,
                     blivet.deviceaction.ActionDestroyDevice):
-                # remove the metadata, otherwise reset() still recognizes
-                # the array
-                for device in action.device.parents:
-                    subprocess.call([
-                            'dd',
-                            'if=/dev/zero',
-                            'of=' + device.path,
-                            'bs=1024',
-                            'count=1024'])
+                cmpi_logging.logger.trace_verbose(
+                        "Result: " + repr(action.device))
+            if do_raid:
+                # work around blivet not destroying MD metadata
+                if isinstance(action, blivet.deviceaction.ActionDestroyDevice):
+                    for device in action.device.parents:
+                        subprocess.call([
+                                'dd',
+                                'if=/dev/zero',
+                                'of=' + device.path,
+                                'bs=1024',
+                                'count=1024'])
+
+
     finally:
         # workaround for bug #891971
         open("/dev/.in_sysinit", "w")

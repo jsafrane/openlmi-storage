@@ -247,7 +247,7 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
         action = blivet.ActionCreateFormat(devices[0],
                 format=fmt)
         openlmi.storage.util.storage.do_storage_action(
-                self.storage, action)
+                self.storage, [action])
         fmtprovider = self.provider_manager.get_provider_for_format(
                 devices[0], fmt)
         format_name = fmtprovider.get_name_for_format(devices[0], fmt)
@@ -407,7 +407,7 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
 
         action = blivet.ActionDestroyFormat(device)
         openlmi.storage.util.storage.do_storage_action(
-                self.storage, action)
+                self.storage, [action])
 
         ret = self.Values.DeleteFileSystem.Job_Completed_with_No_Error
         job.finish_method(
