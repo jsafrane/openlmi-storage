@@ -49,6 +49,7 @@ import pywbem
 import openlmi.common.cmpi_logging as cmpi_logging
 from pywbem.cim_provider2 import CIMProvider2
 import socket
+import traceback
 
 # Too many instance attributes
 # pylint: disable-msg=R0902
@@ -376,8 +377,16 @@ class Job(object):
         try:
             self._execute(*(self._execargs), **(self._execkwargs))
         except pywbem.CIMError, error:
+            cmpi_logging.logger.trace_warn("Job.execute caught an CIMError %s"
+                    % str(error))
+            cmpi_logging.logger.trace_verbose("traceback: %s",
+                        traceback.format_exc())
             self.finish_method(Job.STATE_FAILED, error=error)
         except Exception, ex:
+            cmpi_logging.logger.trace_warn("Job.execute caught an Exception %s"
+                    % str(ex))
+            cmpi_logging.logger.trace_verbose("traceback: %s",
+                        traceback.format_exc())
             error = pywbem.CIMError(pywbem.CIM_ERR_FAILED, str(ex))
             self.finish_method(Job.STATE_FAILED, error=error)
 
@@ -499,7 +508,17 @@ class Job(object):
         if self.return_value is not None:
             inst['ReturnValue'] = str(self.return_value)
         if self.error is not None:
-            inst['Error'] = self.error
+            path = pywbem.CIMInstanceName(
+                    classname="CIM_Error",
+                    keybindings={},
+                    host=socket.gethostname(),
+                    namespace=self.job_manager.namespace)
+            err = pywbem.CIMInstance(
+                    classname="CIM_Error",
+                    path=path)
+            err['CIMStatusCode'] = pywbem.Uint32(self.error[0])
+            err['Message'] = self.error[1]
+            inst['Error'] = [err, ]
         return inst
 
     @cmpi_logging.trace_method
