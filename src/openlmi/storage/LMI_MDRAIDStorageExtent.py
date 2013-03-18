@@ -202,8 +202,13 @@ class LMI_MDRAIDStorageExtent(ExtentProvider, SettingHelper):
     def do_delete_instance(self, device):
         storage.log_storage_call("DELETE MDRAID",
                 {'device': device})
-        action = blivet.deviceaction.ActionDestroyDevice(device)
-        storage.do_storage_action(self.storage, [action])
+        actions = []
+        actions.append(blivet.deviceaction.ActionDestroyDevice(device))
+        # Destroy also all formats on member devices.
+        # TODO: remove when Blivet does this automatically.
+        for parent in device.parents:
+            actions.append(blivet.deviceaction.ActionDestroyFormat(parent))
+        storage.do_storage_action(self.storage, actions)
 
     class Values(ExtentProvider.Values):
         class Level(object):
