@@ -133,6 +133,7 @@ class IndicationManager(object):
         new_broker = ch.PrepareAttachThread()
         self.indication_sender = threading.Thread(
                 target=self._send_indications_loop, args=(new_broker,))
+        self.indication_sender.daemon=True
         self.indication_sender.start()
 
     @cmpi_logging.trace_method
