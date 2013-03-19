@@ -16,7 +16,6 @@
 #
 # Authors: Jan Safranek <jsafrane@redhat.com>
 # -*- coding: utf-8 -*-
-from openlmi.storage.JobManager import Job
 """ Module for LMI_StorageConfigurationService class."""
 
 from openlmi.storage.ServiceProvider import ServiceProvider
@@ -27,6 +26,7 @@ import openlmi.storage.util.units as units
 import openlmi.storage.util.storage as storage
 from openlmi.storage.DeviceProvider import DeviceProvider
 from openlmi.storage.SettingProvider import SettingProvider
+from openlmi.storage.JobManager import Job
 
 class LMI_StorageConfigurationService(ServiceProvider):
     """ Provider of LMI_StorageConfigurationService. """
@@ -226,11 +226,12 @@ class LMI_StorageConfigurationService(ServiceProvider):
         return goal
 
     @cmpi_logging.trace_method
-    def _parse_element(self, param_theelement, classname):
+    def _parse_element(self, param_theelement, classname, blivet_class):
         """
-            Find LVMLogicalVolumeDevice for given CIMInstanceName.
+            Find StorageDevice for given CIMInstanceName.
             Return None if no CIMInstanceName was given.
-            Raise CIMError if the device does not exist or is not LV.
+            Raise CIMError if the device does not exist or is not of given
+            class.
         """
         if not param_theelement:
             return None
@@ -242,10 +243,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
         if not device:
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                     "Cannot find the TheElement device.")
-        if not isinstance(device,
-            blivet.devices.LVMLogicalVolumeDevice):
+        if not isinstance(device, blivet_class):
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
-                "The TheElement parameter is not LMI_LVStorageExtent.")
+                "The TheElement parameter is not %s." % (classname,))
         return device
 
 
@@ -288,7 +288,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
 
         # check parameters
         goal = self._parse_goal(param_goal, "LMI_LVStorageSetting")
-        device = self._parse_element(param_theelement, "LMI_LVStorageExtent")
+        device = self._parse_element(param_theelement, "LMI_LVStorageExtent",
+                blivet.devices.LVMLogicalVolumeDevice)
         pool = self._parse_pool(param_inpool)
 
         # check if resize is needed
@@ -845,8 +846,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
 
         # check the parameters
         goal = self._parse_goal(param_goal, "LMI_MDRAIDStorageSetting")
-        raid = self._parse_element(param_theelement,
-                "LMI_MDRAIDStorageExtent")
+        raid = self._parse_element(param_theelement, "LMI_MDRAIDStorageExtent",
+                blivet.devices.MDRaidArrayDevice)
         (devices, redundancies) = self._parse_inextents(param_inextents)
 
         # level
@@ -909,6 +910,112 @@ class LMI_StorageConfigurationService(ServiceProvider):
             return self._schedule_create_mdraid(
                     param_level, goal, devices, name, input_arguments,
                     method_name)
+
+    @cmpi_logging.trace_method
+    def _delete_mdraid(self, job, devicepath):
+        """
+        Really delete a MD RAID array. This method is called in context of
+        JobManager worker thread.
+        """
+        device = self.storage.devicetree.getDeviceByPath(devicepath)
+        if not device:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Cannot find device %s" % (devicepath,))
+        if not isinstance(device, blivet.devices.MDRaidArrayDevice):
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Device %s is not LMI_MDRAIDStorageExtent" % (devicepath,))
+
+        # finally delete it
+        actions = []
+        actions.append(blivet.ActionDestroyDevice(device))
+        # Destroy also all formats on member devices.
+        # TODO: remove when Blivet does this automatically.
+        for parent in device.parents:
+            actions.append(blivet.deviceaction.ActionDestroyFormat(parent))
+        storage.do_storage_action(self.storage, actions)
+
+        ret = self.Values.DeleteMDRAID.Completed_with_No_Error
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=ret,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments={},
+                affected_elements=[],
+                error=None)
+
+    @cmpi_logging.trace_method
+    def cim_method_deletemdraid(self, env, object_name,
+                                param_theelement=None):
+        """Implements LMI_StorageConfigurationService.DeleteMDRAID()
+
+        Delete MD RAID array. All members are detached from the array and
+        all RAID metadata are erased.
+        
+        Keyword arguments:
+        env -- Provider Environment (pycimmb.ProviderEnvironment)
+        object_name -- A pywbem.CIMInstanceName or pywbem.CIMCLassName 
+            specifying the object on which the method DeleteMDRAID() 
+            should be invoked.
+        param_theelement --  The input parameter TheElement (type REF (pywbem.CIMInstanceName(classname='LMI_MDRAIDStorageExtent', ...)) 
+            The MD RAID device to destroy.
+            
+
+        Returns a two-tuple containing the return value (type pywbem.Uint32 self.Values.DeleteMDRAID)
+        and a list of CIMParameter objects representing the output parameters
+
+        Output parameters:
+        Job -- (type REF (pywbem.CIMInstanceName(classname='CIM_ConcreteJob', ...)) 
+            Reference to the job (may be null if job completed).
+            
+
+        Possible Errors:
+        CIM_ERR_ACCESS_DENIED
+        CIM_ERR_INVALID_PARAMETER (including missing, duplicate, 
+            unrecognized or otherwise incorrect parameters)
+        CIM_ERR_NOT_FOUND (the target CIM Class or instance does not 
+            exist in the specified namespace)
+        CIM_ERR_METHOD_NOT_AVAILABLE (the CIM Server is unable to honor 
+            the invocation request)
+        CIM_ERR_FAILED (some other unspecified error occurred)
+
+        """
+        # check parameters
+        self.check_instance(object_name)
+
+        # remember input parameters for job
+        input_arguments = {
+                'TheElement': pywbem.CIMProperty(name='TheElement',
+                        type='reference',
+                        value=param_theelement),
+        }
+
+        # check the parameters
+        raid = self._parse_element(param_theelement, "LMI_MDRAIDStorageExtent",
+                blivet.devices.MDRaidArrayDevice)
+        if not raid:
+            raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
+                    "Parameter TheElement must be specified an must be "
+                    "reference to LMI_MDRAIDStorageExtent")
+        # Schedule the job
+        job = Job(
+                job_manager=self.job_manager,
+                job_name="DELETE MDRAID " + raid.path,
+                input_arguments=input_arguments,
+                method_name='DeleteMDRAID',
+                affected_elements=[param_theelement],
+                owning_element=self._get_instance_name())
+        job.set_execute_action(self._delete_mdraid,
+                job, raid.path)
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        return (self.Values.CreateOrModifyMDRAID\
+                .Method_Parameters_Checked___Job_Started, outparams)
 
 
     class Values(ServiceProvider.Values):
@@ -1020,3 +1127,16 @@ class LMI_StorageConfigurationService(ServiceProvider):
                 RAID5 = pywbem.Uint16(5)
                 RAID6 = pywbem.Uint16(6)
                 RAID10 = pywbem.Uint16(10)
+        class DeleteMDRAID(object):
+            Completed_with_No_Error = pywbem.Uint32(0)
+            Not_Supported = pywbem.Uint32(1)
+            Unknown = pywbem.Uint32(2)
+            Timeout = pywbem.Uint32(3)
+            Failed = pywbem.Uint32(4)
+            Invalid_Parameter = pywbem.Uint32(5)
+            In_Use = pywbem.Uint32(6)
+            # DMTF_Reserved = ..
+            Method_Parameters_Checked___Job_Started = pywbem.Uint32(4096)
+            Size_Not_Supported = pywbem.Uint32(4097)
+            # Method_Reserved = 4098..32767
+            # Vendor_Specific = 32768..65535

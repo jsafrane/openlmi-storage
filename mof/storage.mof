@@ -497,6 +497,24 @@ class LMI_StorageConfigurationService : CIM_StorageConfigurationService
       uint64 Size
     );
 
+    [Implemented(true), Description("Delete MD RAID array. "
+        "All members are detached from the array and all RAID metadata are "
+        "erased."),
+       ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "4096",
+          "4097", "4098..32767", "32768..65535" },
+       Values { "Completed with No Error", "Not Supported",
+          "Unknown", "Timeout", "Failed", "Invalid Parameter",
+          "In Use", "DMTF Reserved",
+          "Method Parameters Checked - Job Started",
+          "Size Not Supported", "Method Reserved", "Vendor Specific" }]
+    uint32 DeleteMDRAID(
+        [IN, Description("The MD RAID device to destroy.")]
+        LMI_MDRAIDStorageExtent REF TheElement,
+
+        [IN(False), OUT, Description("Reference to the job (may be null if job completed).")]
+        CIM_ConcreteJob REF Job
+    );
+
     [Description("Create or modify Volume Group. This method is shortcut to CreateOrModifyStoragePool "
         "with the right Goal. Lazy applications can use this method to create or modify VGs, "
         "without calculation of the Goal setting."),

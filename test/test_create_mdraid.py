@@ -198,7 +198,14 @@ class TestCreateMDRAID(StorageTestBase):
                 parity_layout=parity_layout,
                 check_parity_layout=True,
                 nspof=nspof)
-        self.wbemconnection.DeleteInstance(raidname)
+
+        # delete the raid
+        (ret, outparams) = self.invoke_async_method(
+                "DeleteMDRAID",
+                self.service,
+                int,
+                TheElement=raidname)
+        self.assertEquals(ret, 0)
 
     def test_create_raid0_level(self):
         """ Test CreateOrModifyMDRAID level 0."""
