@@ -455,6 +455,20 @@ class StorageTestBase(unittest.TestCase):
 
         return (ret, outparams)
 
+    def assertCIMNameEquals(self, first, second):
+        """
+        Compare two CIMInstanceNames. Their hostname is not checked.
+        """
+        first_host = first.host
+        first.host = None
+        second_host = second.host
+        second.host = None
+
+        self.assertEquals(first, second)
+        first.host = first_host
+        second.host = second_host
+
+
 def short_tests_only():
     """
         Returns True, if only short test should be executed, i.e.

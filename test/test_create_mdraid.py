@@ -173,7 +173,7 @@ class TestCreateMDRAID(StorageTestBase):
         self.assertEqual(len(basedons), len(devices))
         for basedon in basedons:
             self.assertIn(basedon['Antecedent'], devices)
-            self.assertEqual(basedon['Dependent'], raidname)
+            self.assertCIMNameEquals(basedon['Dependent'], raidname)
 
         # check setting
         settings = self.wbemconnection.Associators(
