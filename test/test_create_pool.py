@@ -57,11 +57,20 @@ class TestCreatePool(StorageTestBase):
 
     def test_create_1pv(self):
         """ Test CreateOrModifyStoragePool with one PV."""
-        (ret, outparams) = self.wbemconnection.InvokeMethod(
+        (ret, outparams) = self.invoke_async_method(
                 "CreateOrModifyStoragePool",
                 self.service,
+                int, "pool",
                 InExtents=self.partition_names[:1],
                 ElementName='tstName')
+        if len(outparams) == 1:
+            # there is no Size returned, Pegasus does not support it yet
+            # TODO: remove when pegasus supports embedded objects of unknown
+            # types, rhbz#920763
+            if outparams.has_key('pool'):
+                vg = self.wbemconnection.GetInstance(outparams['pool'])
+                outparams['size'] = vg['TotalExtents'] * vg['ExtentSize']
+
         self.assertEqual(ret, 0)
         self.assertEqual(len(outparams), 2)
         self.assertAlmostEqual(
@@ -88,10 +97,19 @@ class TestCreatePool(StorageTestBase):
     @unittest.skipIf(short_tests_only(), "Running short tests only.")
     def test_create_10pv(self):
         """ Test CreateOrModifyStoragePool with 10 PVs."""
-        (ret, outparams) = self.wbemconnection.InvokeMethod(
+        (ret, outparams) = self.invoke_async_method(
                 "CreateOrModifyStoragePool",
                 self.service,
+                int, "pool",
                 InExtents=self.partition_names[:10])
+        if len(outparams) == 1:
+            # there is no Size returned, Pegasus does not support it yet
+            # TODO: remove when pegasus supports embedded objects of unknown
+            # types, rhbz#920763
+            if outparams.has_key('pool'):
+                vg = self.wbemconnection.GetInstance(outparams['pool'])
+                outparams['size'] = vg['TotalExtents'] * vg['ExtentSize']
+
         self.assertEqual(ret, 0)
         self.assertEqual(len(outparams), 2)
         self.assertAlmostEqual(
@@ -107,10 +125,19 @@ class TestCreatePool(StorageTestBase):
         """ Test CreateOrModifyStoragePool with 10 VGs."""
         vgs = []
         for part in self.partition_names[:10]:
-            (ret, outparams) = self.wbemconnection.InvokeMethod(
+            (ret, outparams) = self.invoke_async_method(
                     "CreateOrModifyStoragePool",
                     self.service,
+                    int, "pool",
                     InExtents=[part])
+            if len(outparams) == 1:
+                # there is no Size returned, Pegasus does not support it yet
+                # TODO: remove when pegasus supports embedded objects of unknown
+                # types, rhbz#920763
+                if outparams.has_key('pool'):
+                    vg = self.wbemconnection.GetInstance(outparams['pool'])
+                    outparams['size'] = vg['TotalExtents'] * vg['ExtentSize']
+
             self.assertEqual(ret, 0)
             self.assertEqual(len(outparams), 2)
             vg = outparams['pool']
@@ -188,12 +215,19 @@ class TestCreatePool(StorageTestBase):
         """
         goal = self._create_setting()
 
-        (ret, outparams) = self.wbemconnection.InvokeMethod(
-                    "CreateOrModifyStoragePool",
-                    self.service,
-                    InExtents=self.partition_names[:1],
-                    Goal=goal.path
-                    )
+        (ret, outparams) = self.invoke_async_method(
+                "CreateOrModifyStoragePool",
+                self.service,
+                int, "pool",
+                InExtents=self.partition_names[:1],
+                Goal=goal.path)
+        if len(outparams) == 1:
+            # there is no Size returned, Pegasus does not support it yet
+            # TODO: remove when pegasus supports embedded objects of unknown
+            # types, rhbz#920763
+            if outparams.has_key('pool'):
+                vg = self.wbemconnection.GetInstance(outparams['pool'])
+                outparams['size'] = vg['TotalExtents'] * vg['ExtentSize']
 
         self.assertEqual(ret, 0)
         self.assertEqual(len(outparams), 2)
@@ -245,12 +279,20 @@ class TestCreatePool(StorageTestBase):
         goal['ExtentSize'] = pywbem.Uint64(MEGABYTE)
         self.wbemconnection.ModifyInstance(goal)
 
-        (ret, outparams) = self.wbemconnection.InvokeMethod(
-                    "CreateOrModifyStoragePool",
-                    self.service,
-                    InExtents=self.partition_names[:1],
-                    Goal=goal.path
-                    )
+        (ret, outparams) = self.invoke_async_method(
+                "CreateOrModifyStoragePool",
+                self.service,
+                int, "pool",
+                InExtents=self.partition_names[:1],
+                Goal=goal.path)
+        if len(outparams) == 1:
+            # there is no Size returned, Pegasus does not support it yet
+            # TODO: remove when pegasus supports embedded objects of unknown
+            # types, rhbz#920763
+            if outparams.has_key('pool'):
+                vg = self.wbemconnection.GetInstance(outparams['pool'])
+                outparams['size'] = vg['TotalExtents'] * vg['ExtentSize']
+
         self.assertEqual(ret, 0)
         self.assertEqual(len(outparams), 2)
         self.assertAlmostEqual(

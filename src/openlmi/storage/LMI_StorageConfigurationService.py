@@ -382,10 +382,24 @@ class LMI_StorageConfigurationService(ServiceProvider):
 
 
     @cmpi_logging.trace_method
-    def _modify_vg(self, pool, goal, devices, name):
+    def _modify_vg(self, job, poolname, goal, devnames, name):
         """
             Modify existing Volume Group. The parameters were already checked.
+            This method is called in context of JobManager worker thread.
         """
+        devices = []
+        for devname in devnames:
+            device = self.storage.devicetree.getDeviceByPath(devname)
+            if device is None:
+                raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                        "Device %s disappeared." % (devname,))
+            devices.append(device)
+
+        pool = self.storage.devicetree.getDeviceByPath(poolname)
+        if not pool:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Pool %s disappeared." % (poolname,))
+
         if name is not None:
             # rename
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
@@ -415,12 +429,31 @@ class LMI_StorageConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
                     "Removing devices from volume group is not yet supported.")
 
+        outparams = {}
+        retval = self.Values.CreateOrModifyVG.Job_Completed_with_No_Error
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=retval,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments=outparams,
+                affected_elements=[poolname],
+                error=None)
 
     @cmpi_logging.trace_method
-    def _create_vg(self, goal, devices, name):
+    def _create_vg(self, job, goal, devnames, name):
         """
             Create new  Volume Group. The parameters were already checked.
+            This method is called in context of JobManager worker thread.
         """
+        devices = []
+        for devname in devnames:
+            device = self.storage.devicetree.getDeviceByPath(devname)
+            if device is None:
+                raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                        "Device %s disappeared." % (devname,))
+            devices.append(device)
+
+        actions = []
         for device in devices:
             # TODO: check if it is unused!
             if not (device.format
@@ -428,7 +461,7 @@ class LMI_StorageConfigurationService(ServiceProvider):
                         blivet.formats.lvmpv.LVMPhysicalVolume)):
                 # create the pv format there
                 pv = blivet.formats.getFormat('lvmpv')
-                self.storage.formatDevice(device, pv)
+                actions.append(blivet.ActionCreateFormat(device, pv))
 
         args = {}
         args['parents'] = devices
@@ -440,22 +473,23 @@ class LMI_StorageConfigurationService(ServiceProvider):
         storage.log_storage_call("CREATE VG", args)
 
         vg = self.storage.newVG(**args)
-        action = blivet.ActionCreateDevice(vg)
-        storage.do_storage_action(self.storage, [action])
+        actions.append(blivet.ActionCreateDevice(vg))
+        storage.do_storage_action(self.storage, actions)
 
+        poolname = self.provider_manager.get_name_for_device(vg)
         newsize = vg.size * units.MEGABYTE
-        outparams = [
-                pywbem.CIMParameter(
-                        name='pool',
-                        type='reference',
-                        value=self.provider_manager.get_name_for_device(vg)),
-                pywbem.CIMParameter(
-                    name="size",
-                    type="uint64",
-                    value=pywbem.Uint64(newsize))
-        ]
+        outparams = {
+                'pool': poolname,
+                'size':pywbem.Uint64(newsize),
+        }
         retval = self.Values.CreateOrModifyVG.Job_Completed_with_No_Error
-        return (retval, outparams)
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=retval,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments=outparams,
+                affected_elements=[poolname],
+                error=None)
 
     @cmpi_logging.trace_method
     def _parse_inextents(self, param_inextents):
@@ -491,7 +525,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
                                     param_elementname=None,
                                     param_goal=None,
                                     param_inextents=None,
-                                    param_pool=None):
+                                    param_pool=None,
+                                    input_arguments=None,
+                                    method_name=None):
         """
             Implements LMI_StorageConfigurationService.CreateOrModifyVG()
 
@@ -499,9 +535,33 @@ class LMI_StorageConfigurationService(ServiceProvider):
             CreateOrModifyStoragePool with the right Goal. Lazy applications
             can use this method to create or modify VGs, without calculation
             of the Goal setting.
+            
+            On implementation side, this method is called by
+            CreateOrModifyStoragePool. If so, input_arguments and method_name
+            parameters are set, so we can create proper Job here.
         """
         # check parameters
         self.check_instance(object_name)
+
+        # remember input parameters for job
+        if not input_arguments:
+            input_arguments = {
+                'ElementName' : pywbem.CIMProperty(name='ElementName',
+                        type='string',
+                        value=param_elementname),
+                'Goal' : pywbem.CIMProperty(name='Goal',
+                        type='reference',
+                        value=param_goal),
+                'InExtents': pywbem.CIMProperty(name='InExtents',
+                        type='reference',
+                        is_array=True,
+                        value=param_inextents),
+                'Pool': pywbem.CIMProperty(name='Pool',
+                        type='reference',
+                        value=param_pool),
+            }
+        if not method_name:
+            method_name = 'CreateOrModifyVG'
 
         goal = self._parse_goal(param_goal, "LMI_VGStorageSetting")
         pool = self._parse_pool(param_pool)
@@ -527,10 +587,39 @@ class LMI_StorageConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
                     "Either Pool or InExtents must be specified")
 
+        # Schedule a job
+        devnames = [device.path for device in devices]
+        devpaths = [self.provider_manager.get_name_for_device(device)
+                        for device in devices]
         if pool:
-            return self._modify_vg(pool, goal, devices, name)
+            jobname = "MODIFY VG %s" % (name)
+            poolname = self.provider_manager.get_name_for_device(pool)
         else:
-            return self._create_vg(goal, devices, name)
+            jobname = "CREATE VG %s FROM %s" % (name, ",".join(devnames))
+
+        job = Job(
+                job_manager=self.job_manager,
+                job_name=jobname,
+                input_arguments=input_arguments,
+                method_name=method_name,
+                affected_elements=devpaths,
+                owning_element=self._get_instance_name())
+        if pool:
+            job.set_execute_action(self._modify_vg,
+                    job, poolname, goal, devnames, name)
+        else:
+            job.set_execute_action(self._create_vg,
+                    job, goal, devnames, name)
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        return (self.Values.CreateOrModifyVG\
+                .Method_Parameters_Checked___Job_Started, outparams)
 
 
     @cmpi_logging.trace_method
@@ -570,8 +659,33 @@ class LMI_StorageConfigurationService(ServiceProvider):
         if param_inpools:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
                     "Parameter InPools is not supported.")
+
+        input_arguments = {
+            'ElementName' : pywbem.CIMProperty(name='ElementName',
+                    type='string',
+                    value=param_elementname),
+            'Goal' : pywbem.CIMProperty(name='Goal',
+                    type='reference',
+                    value=param_goal),
+            'InExtents': pywbem.CIMProperty(name='InExtents',
+                    type='reference',
+                    is_array=True,
+                    value=param_inextents),
+            'InPools': pywbem.CIMProperty(name='InPools',
+                    type='reference',
+                    is_array=True,
+                    value=param_inpools),
+            'Pool': pywbem.CIMProperty(name='Pool',
+                    type='reference',
+                    value=param_pool),
+            'Size': pywbem.CIMProperty(name='Size',
+                    type='uint64',
+                    value=param_size),
+        }
+
         return self.cim_method_createormodifyvg(env, object_name,
-                param_elementname, param_goal, param_inextents, param_pool)
+                param_elementname, param_goal, param_inextents, param_pool,
+                input_arguments, 'CreateOrModifyStoragePool')
 
     @cmpi_logging.trace_method
     # Too many aruments of generated method: pylint: disable-msg=R0913
