@@ -16,6 +16,7 @@
 #
 # Authors: Jan Safranek <jsafrane@redhat.com>
 # -*- coding: utf-8 -*-
+from openlmi.storage.JobManager import Job
 """ Module for LMI_StorageConfigurationService class."""
 
 from openlmi.storage.ServiceProvider import ServiceProvider
@@ -607,15 +608,36 @@ class LMI_StorageConfigurationService(ServiceProvider):
                 raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
                         "Parameter ElementType must have value" \
                         " '3 - StorageExtent'.")
+        input_arguments = {
+                'InElements': pywbem.CIMProperty(name='InElements',
+                        type='reference',
+                        is_array=True,
+                        value=param_inelements),
+                'ElementType': pywbem.CIMProperty(name='ElementType',
+                        type='int16',
+                        value=param_elementtype),
+                'ElementName' : pywbem.CIMProperty(name='ElementName',
+                        type='string',
+                        value=param_elementname),
+                'TheElement': pywbem.CIMProperty(name='TheElement',
+                        type='reference',
+                        value=param_theelement),
+                'Goal' : pywbem.CIMProperty(name='Goal',
+                        type='reference',
+                        value=param_goal),
+                'Size' : pywbem.CIMProperty(name='Size',
+                        type='uint64',
+                        value=param_size),
+        }
 
         return self.cim_method_createormodifymdraid(env, object_name,
                 param_elementname=param_elementname,
                 param_theelement=param_theelement,
                 param_goal=param_goal,
                 param_level=None,
-                param_inextents=param_inelements)
-
-
+                param_inextents=param_inelements,
+                input_arguments=input_arguments,
+                method_name='CreateOrModifyElementFromElements')
 
     @cmpi_logging.trace_method
     def _find_raid_level(self, redundancies, goal):
@@ -694,12 +716,50 @@ class LMI_StorageConfigurationService(ServiceProvider):
         return best_level
 
     @cmpi_logging.trace_method
+    def _schedule_create_mdraid(self, level, goal, devices, name,
+            input_arguments, method_name):
+        """
+        Create the job to create a MD RAID.
+        """
+        devnames = [device.path for device in devices]
+        devpaths = [self.provider_manager.get_name_for_device(device)
+                        for device in devices]
+        job = Job(
+                job_manager=self.job_manager,
+                job_name="CREATE MDRAID ON " + "+".join(devnames),
+                input_arguments=input_arguments,
+                method_name=method_name,
+                affected_elements=devpaths,
+                owning_element=self._get_instance_name())
+        job.set_execute_action(self._create_mdraid,
+                job, level, goal, devnames, name)
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        return (self.Values.CreateOrModifyMDRAID\
+                .Method_Parameters_Checked___Job_Started, outparams)
+
+    @cmpi_logging.trace_method
     # pylint: disable-msg=W0613
-    def _create_mdraid(self, level, goal, devices, name):
+    def _create_mdraid(self, job, level, goal, devicnames, name):
         """
             Create new  MD RAID. The parameters were already checked.
         """
-        # TODO: check if devices are unused!
+        # covert devices from strings to real devices
+        devices = []
+        for devname in devicnames:
+            device = self.storage.devicetree.getDeviceByPath(devname)
+            if device is None:
+                raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                        "Device %s disappeared." % (devname,))
+            # TODO: check if devices are unused!
+            devices.append(device)
+
         args = {}
         args['parents'] = devices
         if name:
@@ -714,22 +774,24 @@ class LMI_StorageConfigurationService(ServiceProvider):
         storage.do_storage_action(self.storage, [action])
 
         newsize = raid.size * units.MEGABYTE
-        outparams = [
-                pywbem.CIMParameter(
-                        name='theelement',
-                        type='reference',
-                        value=self.provider_manager.get_name_for_device(raid)),
-                pywbem.CIMParameter(
-                    name="size",
-                    type="uint64",
-                    value=pywbem.Uint64(newsize))
-        ]
+        raidname = self.provider_manager.get_name_for_device(raid)
+        outparams = {
+            'theelement': raidname,
+            'size' : pywbem.Uint64(newsize)
+        }
         retval = self.Values.CreateOrModifyMDRAID.Completed_with_No_Error
-        return (retval, outparams)
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=retval,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments=outparams,
+                affected_elements=[raidname, ],
+                error=None)
 
     @cmpi_logging.trace_method
     # pylint: disable-msg=W0613
-    def _modify_mdraid(self, raid, level, goal, devices, name):
+    def _schedule_modify_mdraid(self, raid, level, goal, devices, name,
+            input_parameters, method_name):
         """
             Modify existing MD RAID. The parameters were already checked.
         """
@@ -742,7 +804,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
                                         param_theelement=None,
                                         param_goal=None,
                                         param_level=None,
-                                        param_inextents=None):
+                                        param_inextents=None,
+                                        input_arguments=None,
+                                        method_name=None):
         """
             Implements LMI_StorageConfigurationService.CreateOrModifyMDRAID()
 
@@ -756,6 +820,30 @@ class LMI_StorageConfigurationService(ServiceProvider):
         # check parameters
         self.check_instance(object_name)
 
+        # remember input parameters for job
+        if not input_arguments:
+            input_arguments = {
+                    'ElementName' : pywbem.CIMProperty(name='ElementName',
+                            type='string',
+                            value=param_elementname),
+                    'TheElement': pywbem.CIMProperty(name='TheElement',
+                            type='reference',
+                            value=param_theelement),
+                    'Goal' : pywbem.CIMProperty(name='Goal',
+                            type='reference',
+                            value=param_goal),
+                    'Level' : pywbem.CIMProperty(name='Level',
+                            type='uint16',
+                            value=param_level),
+                    'InExtents': pywbem.CIMProperty(name='InExtents',
+                            type='reference',
+                            is_array=True,
+                            value=param_inextents),
+            }
+        if not method_name:
+            method_name = "CreateOrModifyMDRAID"
+
+        # check the parameters
         goal = self._parse_goal(param_goal, "LMI_MDRAIDStorageSetting")
         raid = self._parse_element(param_theelement,
                 "LMI_MDRAIDStorageExtent")
@@ -814,9 +902,13 @@ class LMI_StorageConfigurationService(ServiceProvider):
                     "Either TheElement or InExtents must be specified")
 
         if raid:
-            return self._modify_mdraid(raid, param_level, goal, devices, name)
+            return self._schedule_modify_mdraid(
+                    raid, param_level, goal, devices, name, input_arguments,
+                    method_name)
         else:
-            return self._create_mdraid(param_level, goal, devices, name)
+            return self._schedule_create_mdraid(
+                    param_level, goal, devices, name, input_arguments,
+                    method_name)
 
 
     class Values(ServiceProvider.Values):

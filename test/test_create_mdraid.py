@@ -142,17 +142,26 @@ class TestCreateMDRAID(StorageTestBase):
             Destroy everything.
         """
         if goal:
-            (ret, outparams) = self.wbemconnection.InvokeMethod(
+            (ret, outparams) = self.invoke_async_method(
                     "CreateOrModifyMDRAID",
                     self.service,
+                    int, "theelement",
                     InExtents=devices,
                     Goal=goal)
         else:
-            (ret, outparams) = self.wbemconnection.InvokeMethod(
+            (ret, outparams) = self.invoke_async_method(
                     "CreateOrModifyMDRAID",
                     self.service,
+                    int, "theelement",
                     InExtents=devices,
                     Level=pywbem.Uint16(level))
+        if len(outparams) == 1:
+            # there is no Size returned, Pegasus does not support it yet
+            # TODO: remove when pegasus supports embedded objects of unknown
+            # types, rhbz#920763
+            if outparams.has_key('theelement'):
+                raid = self.wbemconnection.GetInstance(outparams['theelement'])
+                outparams['size'] = raid['NumberOfBlocks'] * raid['BlockSize']
 
         self.assertEqual(ret, 0)
         self.assertEqual(len(outparams), 2)
