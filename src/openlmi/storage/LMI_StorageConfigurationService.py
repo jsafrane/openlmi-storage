@@ -1132,6 +1132,107 @@ class LMI_StorageConfigurationService(ServiceProvider):
                 .Method_Parameters_Checked___Job_Started, outparams)
 
 
+    @cmpi_logging.trace_method
+    def _delete_vg(self, job, poolpath):
+        """
+        Delete VG. This method is called in context of
+        JobManager worker thread.
+        """
+        pool = self.storage.devicetree.getDeviceByPath(poolpath)
+        if not pool:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Cannot find VG %s" % (poolpath,))
+        if not isinstance(pool, blivet.devices.LVMVolumeGroupDevice):
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Device %s is not LMI_VGStoragePool" % (poolpath,))
+
+        # finally delete it
+        action = blivet.ActionDestroyDevice(pool)
+        storage.do_storage_action(self.storage, [action])
+
+        ret = self.Values.DeleteVG.Job_Completed_with_No_Error
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=ret,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments={},
+                affected_elements=[],
+                error=None)
+
+    @cmpi_logging.trace_method
+    def cim_method_deletevg(self, env, object_name,
+                            param_pool=None, input_arguments=None,
+                            method_name=None):
+        """Implements LMI_StorageConfigurationService.DeleteVG()
+
+        Start a job to delete a Volume Group. If 0 is returned, the
+        function completed successfully, and no ConcreteJob was required.
+        If 4096/0x1000 is returned, a ConcreteJob will be started to
+        delete the StoragePool. A reference to the Job is returned in the
+        Job parameter.
+        """
+        self.check_instance(object_name)
+        # remember input parameters for job
+        if not input_arguments:
+            input_arguments = {
+                    'Pool': pywbem.CIMProperty(name='Pool',
+                            type='reference',
+                            value=param_pool),
+            }
+        if not method_name:
+            method_name = "DeleteVG"
+
+        # check the parameters
+        pool = self._parse_pool(param_pool)
+        if not pool:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Parameter Pool is mandatory and must be"
+                    " LMI_VGStoragePool.")
+
+        # Schedule the job
+        job = Job(
+                job_manager=self.job_manager,
+                job_name="DELETE VG " + pool.path,
+                input_arguments=input_arguments,
+                method_name=method_name,
+                affected_elements=[param_pool],
+                owning_element=self._get_instance_name())
+        job.set_execute_action(self._delete_vg,
+                job, pool.path)
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        return (self.Values.DeleteVG\
+                .Method_Parameters_Checked___Job_Started, outparams)
+
+    @cmpi_logging.trace_method
+    def cim_method_deletestoragepool(self, env, object_name,
+                                     param_pool=None):
+        """Implements LMI_StorageConfigurationService.DeleteStoragePool()
+
+        Start a job to delete a StoragePool. The freed space is returned
+        source StoragePools (indicated by AllocatedFrom StoragePool) or
+        back to underlying storage extents. If 0 is returned, the function
+        completed successfully, and no ConcreteJob was required. If
+        4096/0x1000 is returned, a ConcreteJob will be started to delete
+        the StoragePool. A reference to the Job is returned in the Job
+        parameter.
+        
+        Implementation just calls DeleteVG with the same arguments.
+        """
+        input_arguments = {
+                'Pool': pywbem.CIMProperty(name='Pool',
+                        type='reference',
+                        value=param_pool),
+        }
+        return self.cim_method_deletevg(env, object_name, param_pool,
+                input_arguments, "DeleteStoragePool")
+
     class Values(ServiceProvider.Values):
         class CreateOrModifyElementFromStoragePool(object):
             Job_Completed_with_No_Error = pywbem.Uint32(0)
@@ -1253,4 +1354,16 @@ class LMI_StorageConfigurationService(ServiceProvider):
             Method_Parameters_Checked___Job_Started = pywbem.Uint32(4096)
             Size_Not_Supported = pywbem.Uint32(4097)
             # Method_Reserved = 4098..32767
+            # Vendor_Specific = 32768..65535
+        class DeleteVG(object):
+            Job_Completed_with_No_Error = pywbem.Uint32(0)
+            Not_Supported = pywbem.Uint32(1)
+            Unknown = pywbem.Uint32(2)
+            Timeout = pywbem.Uint32(3)
+            Failed = pywbem.Uint32(4)
+            Invalid_Parameter = pywbem.Uint32(5)
+            In_Use = pywbem.Uint32(6)
+            # DMTF_Reserved = ..
+            Method_Parameters_Checked___Job_Started = pywbem.Uint32(4096)
+            # Method_Reserved = 4097..32767
             # Vendor_Specific = 32768..65535

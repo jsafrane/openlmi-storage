@@ -91,7 +91,12 @@ class TestCreateVG(StorageTestBase):
                 vg['ExtentSize'] * vg['RemainingExtents'],
                 vg['RemainingManagedSpace'])
 
-        self.wbemconnection.DeleteInstance(vgname)
+        (ret, outparams) = self.invoke_async_method(
+                'DeleteVG',
+                self.service,
+                int, None,
+                Pool=vgname)
+        self.assertEquals(ret, 0)
 
     @unittest.skipIf(short_tests_only(), "Running short tests only.")
     def test_create_10pv(self):
@@ -117,7 +122,12 @@ class TestCreateVG(StorageTestBase):
                 delta=30 * MEGABYTE)
         vg = outparams['pool']
 
-        self.wbemconnection.DeleteInstance(vg)
+        (ret, outparams) = self.invoke_async_method(
+                'DeleteVG',
+                self.service,
+                int, None,
+                Pool=vg)
+        self.assertEquals(ret, 0)
 
     @unittest.skipIf(short_tests_only(), "Running short tests only.")
     def test_create_10vg(self):
@@ -142,7 +152,12 @@ class TestCreateVG(StorageTestBase):
             vgs.append(vg)
 
         for vg in vgs:
-            self.wbemconnection.DeleteInstance(vg)
+            (ret, outparams) = self.invoke_async_method(
+                    'DeleteVG',
+                    self.service,
+                    int, None,
+                    Pool=vg)
+            self.assertEquals(ret, 0)
 
     def test_create_unknown_setting(self):
         """ Test CreateOrModifyVG with non-existing setting."""
@@ -248,7 +263,12 @@ class TestCreateVG(StorageTestBase):
         self.assertLessEqual(setting['PackageRedundancyMax'], goal['PackageRedundancyMax'])
         self.assertGreaterEqual(setting['PackageRedundancyMin'], goal['PackageRedundancyMin'])
 
-        self.wbemconnection.DeleteInstance(vgname)
+        (ret, outparams) = self.invoke_async_method(
+                'DeleteVG',
+                self.service,
+                int, None,
+                Pool=vgname)
+        self.assertEquals(ret, 0)
         self._delete_setting(goal.path)
 
     def test_create_setting_1m(self):
@@ -312,7 +332,12 @@ class TestCreateVG(StorageTestBase):
         self.assertLessEqual(setting['PackageRedundancyMax'], goal['PackageRedundancyMax'])
         self.assertGreaterEqual(setting['PackageRedundancyMin'], goal['PackageRedundancyMin'])
 
-        self.wbemconnection.DeleteInstance(vgname)
+        (ret, outparams) = self.invoke_async_method(
+                'DeleteVG',
+                self.service,
+                int, None,
+                Pool=vgname)
+        self.assertEquals(ret, 0)
         self._delete_setting(goal.path)
 
     def test_create_setting_64k(self):

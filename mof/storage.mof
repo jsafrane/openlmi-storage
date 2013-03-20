@@ -223,7 +223,49 @@ class LMI_StorageConfigurationService : CIM_StorageConfigurationService
              "resulting StoragePool." )]
       CIM_StoragePool REF Pool);
 
+    [Override, Implemented(true), Description (
+          "Start a job to delete a StoragePool. The freed space is "
+          "returned source StoragePools (indicated by AllocatedFrom "
+          "StoragePool) or back to underlying storage extents. If 0 "
+          "is returned, the function completed successfully, and no "
+          "ConcreteJob was required. If 4096/0x1000 is returned, a "
+          "ConcreteJob will be started to delete the StoragePool. A "
+          "reference to the Job is returned in the Job parameter." ),
+       ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "4096",
+          "4097..32767", "32768..65535" },
+       Values { "Job Completed with No Error", "Not Supported",
+          "Unknown", "Timeout", "Failed", "Invalid Parameter",
+          "In Use", "DMTF Reserved",
+          "Method Parameters Checked - Job Started",
+          "Method Reserved", "Vendor Specific" }]
+   uint32 DeleteStoragePool(
+         [IN ( false ), OUT, Description (
+             "Reference to the job (may be null if job completed)."
+              )]
+      CIM_ConcreteJob REF Job,
+         [IN, Description ( "Reference to the pool to delete." )]
+      CIM_StoragePool REF Pool);
 
+   [Implemented(true), Description (
+          "Start a job to delete a Volume Group. If 0 "
+          "is returned, the function completed successfully, and no "
+          "ConcreteJob was required. If 4096/0x1000 is returned, a "
+          "ConcreteJob will be started to delete the StoragePool. A "
+          "reference to the Job is returned in the Job parameter." ),
+       ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "4096",
+          "4097..32767", "32768..65535" },
+       Values { "Job Completed with No Error", "Not Supported",
+          "Unknown", "Timeout", "Failed", "Invalid Parameter",
+          "In Use", "DMTF Reserved",
+          "Method Parameters Checked - Job Started",
+          "Method Reserved", "Vendor Specific" }]
+   uint32 DeleteVG(
+         [IN ( false ), OUT, Description (
+             "Reference to the job (may be null if job completed)."
+              )]
+      CIM_ConcreteJob REF Job,
+         [IN, Description ( "Reference to the pool to delete." )]
+      CIM_StoragePool REF Pool);
 
       [Implemented(true), Override, Description ( 
           "Start a job to create (or modify) a Logical Volume from a "
@@ -313,28 +355,6 @@ class LMI_StorageConfigurationService : CIM_StorageConfigurationService
              "reference to the resulting element." )]
       CIM_LogicalElement REF TheElement);
 
-
-      [Override, Description ( 
-          "Start a job to delete a Volume Group. The freed space is "
-          "returned back to underlying storage extents. If 0 "
-          "is returned, the function completed successfully, and no "
-          "ConcreteJob was required. If 4096/0x1000 is returned, a "
-          "ConcreteJob will be started to delete the StoragePool. A "
-          "reference to the Job is returned in the Job parameter." ), 
-       ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "4096", 
-          "4097..32767", "32768..65535" }, 
-       Values { "Job Completed with No Error", "Not Supported", 
-          "Unknown", "Timeout", "Failed", "Invalid Parameter", 
-          "In Use", "DMTF Reserved", 
-          "Method Parameters Checked - Job Started", 
-          "Method Reserved", "Vendor Specific" }]
-   uint32 DeleteStoragePool(
-         [IN ( false ), OUT, Description ( 
-             "Reference to the job (may be null if job completed)."
-              )]
-      CIM_ConcreteJob REF Job, 
-         [IN, Description ( "Reference to the pool to delete." )]
-      CIM_StoragePool REF Pool);
 
       [Override, Description ( 
           "Start a job to delete an element, i.e. Logical Volume, previously created from "
