@@ -1318,6 +1318,107 @@ class LMI_StorageConfigurationService(ServiceProvider):
         return self.cim_method_deletevg(env, object_name, param_pool,
                 input_arguments, "DeleteStoragePool")
 
+    @cmpi_logging.trace_method
+    def _delete_lv(self, job, devicepath):
+        """
+        Delete VG. This method is called in context of
+        JobManager worker thread.
+        """
+        device = self.storage.devicetree.getDeviceByPath(devicepath)
+        if not device:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Cannot find LV %s" % (devicepath,))
+        if not isinstance(device, blivet.devices.LVMLogicalVolumeDevice):
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Device %s is not LMI_LVStorageExtent" % (devicepath,))
+
+        # finally delete it
+        action = blivet.ActionDestroyDevice(device)
+        storage.do_storage_action(self.storage, [action])
+
+        ret = self.Values.DeleteLV.Job_Completed_with_No_Error
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=ret,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments={},
+                affected_elements=[],
+                error=None)
+
+    @cmpi_logging.trace_method
+    def cim_method_deletelv(self, env, object_name,
+                            param_theelement=None,
+                            input_arguments=None, method_name=None):
+        """Implements LMI_StorageConfigurationService.DeleteLV()
+
+        Start a job to delete a  Logical Volume. If 0 is returned, the
+        function completed successfully and no ConcreteJob was required.
+        If 4096/0x1000 is returned, a ConcreteJob will be started to
+        delete the element. A reference to the Job is returned in the Job
+        parameter. This method is alias of ReturnToStoragePool().
+        """
+
+        self.check_instance(object_name)
+        # remember input parameters for job
+        if not input_arguments:
+            input_arguments = {
+                    'TheElement': pywbem.CIMProperty(name='TheElement',
+                            type='reference',
+                            value=param_theelement),
+            }
+        if not method_name:
+            method_name = "DeleteLV"
+
+        # check the parameters
+        device = self._parse_element(param_theelement, "LMI_LVStorageExtent",
+                blivet.devices.LVMLogicalVolumeDevice)
+        if not device:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Parameter TheElement is mandatory and must be"
+                    " LMI_LVStorageExtent.")
+
+        # Schedule the job
+        job = Job(
+                job_manager=self.job_manager,
+                job_name="DELETE LV " + device.path,
+                input_arguments=input_arguments,
+                method_name=method_name,
+                affected_elements=[param_theelement],
+                owning_element=self._get_instance_name())
+        job.set_execute_action(self._delete_lv,
+                job, device.path)
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        return (self.Values.DeleteLV\
+                .Method_Parameters_Checked___Job_Started, outparams)
+
+    @cmpi_logging.trace_method
+    def cim_method_returntostoragepool(self, env, object_name,
+                                       param_theelement=None):
+        """Implements LMI_StorageConfigurationService.ReturnToStoragePool()
+
+        Start a job to delete an element, i.e. Logical Volume, previously
+        created from a StoragePool. The freed space is returned to the
+        source StoragePool. If 0 is returned, the function completed
+        successfully and no ConcreteJob was required. If 4096/0x1000 is
+        returned, a ConcreteJob will be started to delete the element. A
+        reference to the Job is returned in the Job parameter.
+        """
+        input_arguments = {
+                'TheElement': pywbem.CIMProperty(name='TheElement',
+                        type='reference',
+                        value=param_theelement),
+        }
+        return self.cim_method_deletelv(env, object_name,
+                param_theelement, input_arguments, "ReturnToStoragePool")
+
+
     class Values(ServiceProvider.Values):
         class CreateOrModifyElementFromStoragePool(object):
             Job_Completed_with_No_Error = pywbem.Uint32(0)
@@ -1441,6 +1542,18 @@ class LMI_StorageConfigurationService(ServiceProvider):
             # Method_Reserved = 4098..32767
             # Vendor_Specific = 32768..65535
         class DeleteVG(object):
+            Job_Completed_with_No_Error = pywbem.Uint32(0)
+            Not_Supported = pywbem.Uint32(1)
+            Unknown = pywbem.Uint32(2)
+            Timeout = pywbem.Uint32(3)
+            Failed = pywbem.Uint32(4)
+            Invalid_Parameter = pywbem.Uint32(5)
+            In_Use = pywbem.Uint32(6)
+            # DMTF_Reserved = ..
+            Method_Parameters_Checked___Job_Started = pywbem.Uint32(4096)
+            # Method_Reserved = 4097..32767
+            # Vendor_Specific = 32768..65535
+        class DeleteLV(object):
             Job_Completed_with_No_Error = pywbem.Uint32(0)
             Not_Supported = pywbem.Uint32(1)
             Unknown = pywbem.Uint32(2)

@@ -68,7 +68,8 @@ class TestCreateLV(StorageTestBase):
 
     def _destroy_vg(self, vgname):
         """ Destroy VG and its partition. """
-        self.wbemconnection.DeleteInstance(vgname)
+        self.invoke_async_method("DeleteVG", self.service, int, None,
+                Pool=vgname)
 
     def test_create_no_pool(self):
         """ Test CreateOrModifyLV without InPool."""
@@ -204,7 +205,8 @@ class TestCreateLV(StorageTestBase):
                 new_vg['RemainingManagedSpace'],
                 self.vg['RemainingManagedSpace'] - 10 * self.vg['ExtentSize'])
 
-        self.wbemconnection.DeleteInstance(lv_name)
+        self.invoke_async_method("DeleteLV", self.service, int, None,
+                TheElement=lv_name)
 
     def test_create_goal_name(self):
         """ Test CreateOrModifyLV with a Goal and elementname."""
@@ -272,7 +274,8 @@ class TestCreateLV(StorageTestBase):
                 self.vg['RemainingManagedSpace'] - 10 * self.vg['ExtentSize'])
 
         self.wbemconnection.DeleteInstance(goal.path)
-        self.wbemconnection.DeleteInstance(lv_name)
+        self.invoke_async_method("DeleteLV", self.service, int, None,
+                TheElement=lv_name)
 
     @unittest.skipIf(short_tests_only(), reason="Skipping long tests.")
     def test_create_10(self):
@@ -290,7 +293,7 @@ class TestCreateLV(StorageTestBase):
                 # there is no Size returned, Pegasus does not support it yet
                 # TODO: remove when pegasus supports embedded objects of unknown
                 # types, rhbz#920763
-                if outparams.has_key('TheElementt'):
+                if outparams.has_key('TheElement'):
                     lv = self.wbemconnection.GetInstance(outparams['TheElement'])
                     outparams['Size'] = lv['BlockSize'] * lv['NumberOfBlocks']
             self.assertEqual(retval, 0)
@@ -329,7 +332,8 @@ class TestCreateLV(StorageTestBase):
                     self.vg['RemainingManagedSpace'] - (i + 1) * 2 * self.vg['ExtentSize'])
 
         for lv in lvs:
-            self.wbemconnection.DeleteInstance(lv.path)
+            self.invoke_async_method("DeleteLV", self.service, int, None,
+                    TheElement=lv.path)
 
 if __name__ == '__main__':
     unittest.main()

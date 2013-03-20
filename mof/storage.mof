@@ -355,33 +355,6 @@ class LMI_StorageConfigurationService : CIM_StorageConfigurationService
              "reference to the resulting element." )]
       CIM_LogicalElement REF TheElement);
 
-
-      [Override, Description ( 
-          "Start a job to delete an element, i.e. Logical Volume, previously created from "
-          "a StoragePool. The freed space is returned to the source "
-          "StoragePool. If 0 is returned, the function completed "
-          "successfully and no ConcreteJob was required. If "
-          "4096/0x1000 is returned, a ConcreteJob will be started "
-          "to delete the element. A reference to the Job is "
-          "returned in the Job parameter." ), 
-       ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "4096", 
-          "4097..32767", "32768..65535" }, 
-       Values { "Job Completed with No Error", "Not Supported", 
-          "Unknown", "Timeout", "Failed", "Invalid Parameter", 
-          "In Use", "DMTF Reserved", 
-          "Method Parameters Checked - Job Started", 
-          "Method Reserved", "Vendor Specific" }]
-   uint32 ReturnToStoragePool(
-         [IN ( false ), OUT, Description ( 
-             "Reference to the job (may be null if job completed)."
-              )]
-      CIM_ConcreteJob REF Job, 
-         [IN, Description ( 
-             "Reference to the element to return to the StoragePool."
-              )]
-      CIM_LogicalElement REF TheElement);
-
-
       [Override, Description ( 
           "Start a job to create (or modify) a MD RAID "
           "from specified input StorageExtents. "
@@ -622,6 +595,57 @@ class LMI_StorageConfigurationService : CIM_StorageConfigurationService
         [IN(False), OUT, Description("Reference to the job (may be null if job completed).")]
         CIM_ConcreteJob REF Job
     );
+
+    [Override, Implemented(true), Description (
+          "Start a job to delete an element previously created from "
+          "a StoragePool. The freed space is returned to the source "
+          "StoragePool. If 0 is returned, the function completed "
+          "successfully and no ConcreteJob was required. If "
+          "4096/0x1000 is returned, a ConcreteJob will be started "
+          "to delete the element. A reference to the Job is "
+          "returned in the Job parameter." ),
+       ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "4096",
+          "4097..32767", "32768..65535" },
+       Values { "Job Completed with No Error", "Not Supported",
+          "Unknown", "Timeout", "Failed", "Invalid Parameter",
+          "In Use", "DMTF Reserved",
+          "Method Parameters Checked - Job Started",
+          "Method Reserved", "Vendor Specific" }]
+   uint32 ReturnToStoragePool(
+         [IN ( false ), OUT, Description (
+             "Reference to the job (may be null if job completed)."
+              )]
+      CIM_ConcreteJob REF Job,
+         [IN, Description (
+             "Reference to the element to return to the StoragePool."
+              )]
+      CIM_LogicalElement REF TheElement);
+
+    [Implemented(true), Description (
+          "Start a job to delete a  Logical Volume. "
+          "If 0 is returned, the function completed "
+          "successfully and no ConcreteJob was required. If "
+          "4096/0x1000 is returned, a ConcreteJob will be started "
+          "to delete the element. A reference to the Job is "
+          "returned in the Job parameter.\n"
+          "This method is alias of ReturnToStoragePool()." ),
+       ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "4096",
+          "4097..32767", "32768..65535" },
+       Values { "Job Completed with No Error", "Not Supported",
+          "Unknown", "Timeout", "Failed", "Invalid Parameter",
+          "In Use", "DMTF Reserved",
+          "Method Parameters Checked - Job Started",
+          "Method Reserved", "Vendor Specific" }]
+   uint32 DeleteLV(
+         [IN ( false ), OUT, Description (
+             "Reference to the job (may be null if job completed)."
+              )]
+      CIM_ConcreteJob REF Job,
+         [IN, Description (
+             "Reference to the element to return to the StoragePool."
+              )]
+      LMI_LVStorageExtent REF TheElement);
+
     [ Implemented(true) ] uint16 EnabledDefault;
     [ Implemented(true) ] uint16 EnabledState;
     [ Implemented(true) ] uint16 HealthState;

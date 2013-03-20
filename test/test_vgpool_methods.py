@@ -59,17 +59,19 @@ class TestVGPoolMethods(StorageTestBase):
             Create a partition and Volume Group on it and return its
             CIMInstanceName.
         """
-        (ret, outparams) = self.wbemconnection.InvokeMethod(
+        (ret, outparams) = self.invoke_async_method(
                 "CreateOrModifyVG",
                 self.service,
+                int, 'Pool',
                 InExtents=self.partition_names[:1],
                 ElementName='tstName')
         self.assertEqual(ret, 0)
-        return outparams['pool']
+        return outparams['Pool']
 
     def _destroy_vg(self, vgname):
         """ Destroy VG and its partition. """
-        self.wbemconnection.DeleteInstance(vgname)
+        self.invoke_async_method("DeleteVG", self.service, int, None,
+                Pool=vgname)
 
     def test_supported_sizes(self):
         """ Test GetSupportedSizes() """
