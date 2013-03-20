@@ -468,6 +468,39 @@ class StorageTestBase(unittest.TestCase):
         first.host = first_host
         second.host = second_host
 
+    def invoke_async_method(self,
+            method_name,
+            object_name,
+            return_constructor=int,
+            affected_output_name=None,
+            *args, **kwargs):
+        """
+        Invoke a method and if it returns a job, wait for the job.
+        Return (retvalue, outparams) in the same way as finish_method() would.
+
+        :param method_name: (``string``) Name of the method.
+        :param object_name: (``CIMInstanceName``) Instance, on which the method
+            should be invoked.
+        :param return_constructor: (function) Function, which converts
+            string to the right type, for example int.
+        :param affected_output_name: (``string``) If the output parameter of
+            the method can discovered using LMI_<name>AffectedMethodElement
+            association, this is the name of output parameter, which corresponds
+            to this affected element.
+        """
+        (ret, outparams) = self.wbemconnection.InvokeMethod(
+                method_name,
+                object_name,
+                *args,
+                **kwargs)
+        if ret == self.JOB_CREATED:
+            # wait for the job
+            jobname = outparams['job']
+            (ret, outparams) = self.finish_job(jobname,
+                    return_constructor,
+                    affected_output_name)
+        return (ret, outparams)
+
 
 def short_tests_only():
     """
