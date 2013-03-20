@@ -57,9 +57,10 @@ class TestCreateLV(StorageTestBase):
             Create a partition and Volume Group on it and return its
             CIMInstanceName.
         """
-        (ret, outparams) = self.wbemconnection.InvokeMethod(
+        (ret, outparams) = self.invoke_async_method(
                 "CreateOrModifyVG",
                 self.service,
+                int, "pool",
                 InExtents=self.partition_names[:1],
                 ElementName='tstName')
         self.assertEqual(ret, 0)
@@ -141,16 +142,25 @@ class TestCreateLV(StorageTestBase):
 
     def test_create_no_goal(self):
         """ Test CreateOrModifyLV without any Goal."""
-        (retval, outparams) = self.wbemconnection.InvokeMethod(
+        (retval, outparams) = self.invoke_async_method(
                 "CreateOrModifyLV",
                 self.service,
+                int, "TheElement",
                 InPool=self.vg.path,
                 Size=pywbem.Uint64(10 * self.vg['ExtentSize']))
+        if len(outparams) == 1:
+            # there is no Size returned, Pegasus does not support it yet
+            # TODO: remove when pegasus supports embedded objects of unknown
+            # types, rhbz#920763
+            if outparams.has_key('TheElement'):
+                lv = self.wbemconnection.GetInstance(outparams['TheElement'])
+                outparams['Size'] = lv['BlockSize'] * lv['NumberOfBlocks']
+
         self.assertEqual(retval, 0)
         self.assertEqual(len(outparams), 2)
         self.assertEqual(outparams['Size'], 10 * self.vg['ExtentSize'])
 
-        lv_name = outparams['theelement']
+        lv_name = outparams['TheElement']
         lv = self.wbemconnection.GetInstance(lv_name)
         vg_setting = self.wbemconnection.Associators(self.vg.path,
                 AssocClass="LMI_VGElementSettingData")[0]
@@ -199,18 +209,26 @@ class TestCreateLV(StorageTestBase):
     def test_create_goal_name(self):
         """ Test CreateOrModifyLV with a Goal and elementname."""
         goal = self._create_setting()
-        (retval, outparams) = self.wbemconnection.InvokeMethod(
+        (retval, outparams) = self.invoke_async_method(
                 "CreateOrModifyLV",
                 self.service,
+                int, "TheElement",
                 InPool=self.vg.path,
                 Size=pywbem.Uint64(10 * self.vg['ExtentSize']),
                 Goal=goal.path,
                 ElementName="tstNAME")
+        if len(outparams) == 1:
+            # there is no Size returned, Pegasus does not support it yet
+            # TODO: remove when pegasus supports embedded objects of unknown
+            # types, rhbz#920763
+            if outparams.has_key('TheElement'):
+                lv = self.wbemconnection.GetInstance(outparams['TheElement'])
+                outparams['Size'] = lv['BlockSize'] * lv['NumberOfBlocks']
         self.assertEqual(retval, 0)
         self.assertEqual(len(outparams), 2)
         self.assertEqual(outparams['Size'], 10 * self.vg['ExtentSize'])
 
-        lv_name = outparams['theelement']
+        lv_name = outparams['TheElement']
         lv = self.wbemconnection.GetInstance(lv_name)
         lv_setting = self.wbemconnection.Associators(lv_name,
                 AssocClass="LMI_LVElementSettingData")[0]
@@ -261,17 +279,25 @@ class TestCreateLV(StorageTestBase):
         """ Test CreateOrModifyLV 10x."""
         lvs = []
         for i in range(10):
-            (retval, outparams) = self.wbemconnection.InvokeMethod(
+            (retval, outparams) = self.invoke_async_method(
                     "CreateOrModifyLV",
                     self.service,
+                    int, "TheElement",
                     InPool=self.vg.path,
                     Size=pywbem.Uint64(2 * self.vg['ExtentSize']),
                     )
+            if len(outparams) == 1:
+                # there is no Size returned, Pegasus does not support it yet
+                # TODO: remove when pegasus supports embedded objects of unknown
+                # types, rhbz#920763
+                if outparams.has_key('TheElementt'):
+                    lv = self.wbemconnection.GetInstance(outparams['TheElement'])
+                    outparams['Size'] = lv['BlockSize'] * lv['NumberOfBlocks']
             self.assertEqual(retval, 0)
             self.assertEqual(len(outparams), 2)
             self.assertEqual(outparams['Size'], 2 * self.vg['ExtentSize'])
 
-            lv_name = outparams['theelement']
+            lv_name = outparams['TheElement']
             lv = self.wbemconnection.GetInstance(lv_name)
             lv_setting = self.wbemconnection.Associators(lv_name,
                     AssocClass="LMI_LVElementSettingData")[0]

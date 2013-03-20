@@ -136,11 +136,15 @@ class LMI_StorageConfigurationService(ServiceProvider):
         return self._check_redundancy_setting(redundancy, setting)
 
     @cmpi_logging.trace_method
-    def _modify_lv(self, device, name, size):
+    def _modify_lv(self, job, devicename, name, size):
         """
             Really modify the logical volume, all parameters were checked.
         """
-        outparams = []
+        device = self.storage.devicetree.getDeviceByPath(devicename)
+        if device is None:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Device %s disappeared." % (devicename,))
+
         if name is not None:
             # rename
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
@@ -160,25 +164,30 @@ class LMI_StorageConfigurationService(ServiceProvider):
                 self.storage.reset()
 
         newsize = device.size * units.MEGABYTE
-        outparams.append(pywbem.CIMParameter(
-                name="Size",
-                type="uint64",
-                value=pywbem.Uint64(newsize)))
-
-        outparams.append(pywbem.CIMParameter(
-                name='theelement',
-                type='reference',
-                value=self.provider_manager.get_name_for_device(device)))
+        outparams = {}
+        outparams['Size'] = pywbem.Uint64(newsize)
+        outparams['TheElement'] = \
+                self.provider_manager.get_name_for_device(device)
         ret = self.Values.CreateOrModifyElementFromStoragePool \
                 .Job_Completed_with_No_Error
-        return (ret, outparams)
 
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=ret,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments=outparams,
+                affected_elements=[devicename],
+                error=None)
 
     @cmpi_logging.trace_method
-    def _create_lv(self, pool, name, size):
+    def _create_lv(self, job, poolname, name, size):
         """
             Really create the logical volume, all parameters were checked.
         """
+        pool = self.storage.devicetree.getDeviceByPath(poolname)
+        if pool is None:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Pool %s disappeared." % (poolname,))
         args = {}
         args['parents'] = [pool]
         args['size'] = pool.align(float(size) / units.MEGABYTE, True)
@@ -192,19 +201,20 @@ class LMI_StorageConfigurationService(ServiceProvider):
         storage.do_storage_action(self.storage, [action])
 
         newsize = lv.size * units.MEGABYTE
-        outparams = [
-                pywbem.CIMParameter(
-                        name='theelement',
-                        type='reference',
-                        value=self.provider_manager.get_name_for_device(lv)),
-                pywbem.CIMParameter(
-                    name="Size",
-                    type="uint64",
-                    value=pywbem.Uint64(newsize))
-        ]
+        lvname = self.provider_manager.get_name_for_device(lv)
+        outparams = {
+                'TheElement': lvname,
+                'Size': pywbem.Uint64(newsize)
+        }
         ret = self.Values.CreateOrModifyElementFromStoragePool \
                 .Job_Completed_with_No_Error
-        return (ret, outparams)
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=ret,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments=outparams,
+                affected_elements=[lvname],
+                error=None)
 
     @cmpi_logging.trace_method
     def _parse_goal(self, param_goal, classname):
@@ -275,7 +285,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
                                     param_goal=None,
                                     param_theelement=None,
                                     param_inpool=None,
-                                    param_size=None):
+                                    param_size=None,
+                                    input_arguments=None,
+                                    method_name=None):
         """
             Implements LMI_StorageConfigurationService.CreateOrModifyLV()
 
@@ -285,6 +297,28 @@ class LMI_StorageConfigurationService(ServiceProvider):
             calculation of the Goal setting.
         """
         self.check_instance(object_name)
+
+        # remember input parameters for job
+        if not input_arguments:
+            input_arguments = {
+                'ElementName' : pywbem.CIMProperty(name='ElementName',
+                        type='string',
+                        value=param_elementname),
+                'Goal' : pywbem.CIMProperty(name='Goal',
+                        type='reference',
+                        value=param_goal),
+                'TheElement': pywbem.CIMProperty(name='TheElement',
+                        type='reference',
+                        value=param_theelement),
+                'InPool': pywbem.CIMProperty(name='InPool',
+                        type='reference',
+                        value=param_inpool),
+                'Size': pywbem.CIMProperty(name='Size',
+                        type='uint64',
+                        value=param_size),
+            }
+        if not method_name:
+            method_name = 'CreateOrModifyLV'
 
         # check parameters
         goal = self._parse_goal(param_goal, "LMI_LVStorageSetting")
@@ -332,14 +366,42 @@ class LMI_StorageConfigurationService(ServiceProvider):
                     "Parameter Size must be set when creating a logical"\
                     " volume.")
 
+        # Schedule a job
         if device:
-            return self._modify_lv(device, param_elementname, param_size)
+            jobname = "MODIFY LV %s" % (device.path)
+            devname = device.path
+            affected_elements = [devname]
         else:
-            return self._create_lv(pool, param_elementname, param_size)
+            jobname = "CREATE LV %s FROM %s" % (param_elementname, pool.path)
+            poolname = pool.path
+            affected_elements = [poolname]
 
+        job = Job(
+                job_manager=self.job_manager,
+                job_name=jobname,
+                input_arguments=input_arguments,
+                method_name=method_name,
+                affected_elements=affected_elements,
+                owning_element=self._get_instance_name())
+        if device:
+            job.set_execute_action(self._modify_lv,
+                    job, devname, param_elementname, param_size)
+        else:
+            job.set_execute_action(self._create_lv,
+                    job, poolname, param_elementname, param_size)
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        return (self.Values.CreateOrModifyLV\
+                .Method_Parameters_Checked___Job_Started, outparams)
 
     @cmpi_logging.trace_method
-    # Too many aruments of generated method: pylint: disable-msg=R0913
+    # Too many arguments of generated method: pylint: disable-msg=R0913
     def cim_method_createormodifyelementfromstoragepool(self, env, object_name,
                                                         param_elementname=None,
                                                         param_goal=None,
@@ -372,13 +434,36 @@ class LMI_StorageConfigurationService(ServiceProvider):
             if param_elementtype != etype.StorageExtent:
                 raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
                         "The only ElementType is StorageExtent (3).")
+
+        input_arguments = {
+            'ElementName' : pywbem.CIMProperty(name='ElementName',
+                    type='string',
+                    value=param_elementname),
+            'Goal' : pywbem.CIMProperty(name='Goal',
+                    type='reference',
+                    value=param_goal),
+            'TheElement': pywbem.CIMProperty(name='TheElement',
+                    type='reference',
+                    value=param_theelement),
+            'InPool': pywbem.CIMProperty(name='InPool',
+                    type='reference',
+                    value=param_inpool),
+            'ElementType': pywbem.CIMProperty(name='ElementType',
+                    type='uint16',
+                    value=param_elementtype),
+            'Size': pywbem.CIMProperty(name='Size',
+                    type='uint64',
+                    value=param_size),
+        }
         # create LV
         return self.cim_method_createormodifylv(env, object_name,
                 param_elementname,
                 param_goal,
                 param_theelement,
                 param_inpool,
-                param_size)
+                param_size,
+                input_arguments=input_arguments,
+                method_name='CreateOrModifyElementFromStoragePool')
 
 
     @cmpi_logging.trace_method
