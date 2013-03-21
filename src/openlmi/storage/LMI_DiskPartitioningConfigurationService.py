@@ -27,6 +27,7 @@ import openlmi.storage.util.storage as storage
 import openlmi.storage.util.units as units
 import parted
 import openlmi.common.cmpi_logging as cmpi_logging
+from openlmi.storage.JobManager import Job
 
 class LMI_DiskPartitionConfigurationService(ServiceProvider):
     """
@@ -398,12 +399,18 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
         return part_type
 
     @cmpi_logging.trace_method
-    def _lmi_create_partition(self, device, goal, size):
+    def _lmi_create_partition(self, job, devicename, goal, size):
         """
             Create partition on given device with  given goal and size.
             Size can be null, which means the largest possible size.
             Return (retval, partition, size).
+            This method is called from JobManager worker thread!
         """
+        device = self.provider_manager.get_device_for_name(devicename)
+        if not device:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "The devices disappeared: " + devicename)
+
         bootable = None
         part_type = None
         hidden = None
@@ -468,7 +475,19 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
 
         ret = self.Values.LMI_CreateOrModifyPartition\
                 .Job_Completed_with_No_Error
-        return (ret, partition, size)
+        partition_name = self.provider_manager.get_name_for_device(partition)
+        outparams = {
+                'Size': pywbem.Uint64(size),
+                'Partition': partition_name
+        }
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=ret,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments=outparams,
+                affected_elements=[partition_name, ],
+                error=None)
+
 
     @cmpi_logging.trace_method
     def cim_method_lmi_createormodifypartition(self, env, object_name,
@@ -513,9 +532,25 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
                 creating a partition, the larges possible partition is
                 created.On output, the achieved size is returned.
         """
-        # check parameters
         self.check_instance(object_name)
 
+        # remember input parameters for Job
+        input_arguments = {
+                'Partition' : pywbem.CIMProperty(name='Partition',
+                        type='reference',
+                        value=param_partition),
+                'Goal' : pywbem.CIMProperty(name='Goal',
+                        type='reference',
+                        value=param_goal),
+                'Extent': pywbem.CIMProperty(name='Extent',
+                        type='reference',
+                        value=param_extent),
+                'Size': pywbem.CIMProperty(name='Size',
+                        type='uint64',
+                        value=param_size),
+        }
+
+        # check parameters
         if not param_partition and not param_extent:
             raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
                     "Either Partition or extent parameter must be present.")
@@ -526,24 +561,41 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
 
         if partition:
             # modify
-            (retval, partition, size) = self._lmi_modify_partition(
-                    partition, goal, param_size)
+            job_name = "MODIFY PARTITION %s" % (partition.path,)
+            affected_elements = [param_partition]
         else:
             # create
-            (retval, partition, size) = self._lmi_create_partition(
-                    device, goal, param_size)
+            job_name = "CREATE PARTITION ON %s" % (device.path,)
+            affected_elements = [param_extent]
 
-        out_params = []
+        # prepare job
+        job = Job(
+                job_manager=self.job_manager,
+                job_name=job_name,
+                input_arguments=input_arguments,
+                method_name='LMI_CreateOrModifyPartition',
+                affected_elements=affected_elements,
+                owning_element=self._get_instance_name())
         if partition:
-            partition_name = self.provider_manager.get_name_for_device(
-                    partition)
-            out_params.append(pywbem.CIMParameter('partition', type='reference',
-                           value=partition_name))
-        if size:
-            out_params.append(pywbem.CIMParameter('size', type='uint64',
-                           value=pywbem.Uint64(size)))
+            # modify
+            job.set_execute_action(self._lmi_modify_partition,
+                    job, param_partition, goal, param_size)
 
-        return (retval, out_params)
+        else:
+            # create
+            job.set_execute_action(self._lmi_create_partition,
+                    job, param_extent, goal, param_size)
+
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        ret = self.Values.LMI_CreateOrModifyPartition\
+                .Method_Parameters_Checked___Job_Started
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+        return (ret, outparams)
 
 
 
