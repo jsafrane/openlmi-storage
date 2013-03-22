@@ -162,7 +162,7 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
         return goal
 
     @cmpi_logging.trace_method
-    def _parse_partition(self, param_partition, device):
+    def _parse_partition(self, param_partition, device=None):
         """
             Check Partition parameter of a CIM method.
             It must be CIMInstanceName of a CIM_Partition.
@@ -183,8 +183,7 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
         if not partition:
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                 "Cannot find the Partition.")
-        if not isinstance(device,
-            blivet.devices.PartitionDevice):
+        if not isinstance(partition, blivet.devices.PartitionDevice):
             raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
                 "Parameter Partition does not refer to partition.")
         if device:
@@ -597,6 +596,72 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
         self.job_manager.add_job(job)
         return (ret, outparams)
 
+    def _delete_partition(self, job, devicename):
+        """
+            Delete given partition.
+            This method is called from JobManager worker thread!
+        """
+        device = self.provider_manager.get_device_for_name(devicename)
+        if not device:
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "The devices disappeared: " + devicename)
+
+        action = blivet.ActionDestroyDevice(device)
+        storage.do_storage_action(self.storage, [action])
+
+        ret = self.Values.LMI_DeletePartition.Job_Completed_with_No_Error
+
+        job.finish_method(
+                Job.STATE_FINISHED_OK,
+                return_value=ret,
+                return_type=Job.ReturnValueType.Uint32,
+                output_arguments=[],
+                affected_elements=[],
+                error=None)
+
+    def cim_method_lmi_deletepartition(self, env, object_name,
+                                       param_partition=None):
+        """
+        Implements LMI_DiskPartitionConfigurationService.LMI_DeletePartition()
+        Delete partition.
+        """
+        self.check_instance(object_name)
+
+        # remember input parameters for Job
+        input_arguments = {
+                'Partition' : pywbem.CIMProperty(name='Partition',
+                        type='reference',
+                        value=param_partition),
+        }
+
+        # check parameters
+        if not param_partition:
+            raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
+                    "Parameter Partition must be specified.")
+        device = self._parse_partition(param_partition)
+
+        # prepare job
+        job = Job(
+                job_manager=self.job_manager,
+                job_name="DELETE PARTITION %s" % (device.path,),
+                input_arguments=input_arguments,
+                method_name='LMI_DeletePartition',
+                affected_elements=[param_partition],
+                owning_element=self._get_instance_name())
+        job.set_execute_action(self._delete_partition,
+                job, param_partition)
+
+        outparams = [ pywbem.CIMParameter(
+                name='job',
+                type='reference',
+                value=job.get_name())]
+        ret = self.Values.LMI_DeletePartition\
+                .Method_Parameters_Checked___Job_Started
+
+        # enqueue the job
+        self.job_manager.add_job(job)
+        return (ret, outparams)
+
 
 
     class Values(ServiceProvider.Values):
@@ -636,6 +701,20 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
             # Vendor_Specific = 0x8000..
 
         class LMI_CreateOrModifyPartition(object):
+            Job_Completed_with_No_Error = pywbem.Uint32(0)
+            Not_Supported = pywbem.Uint32(1)
+            Unknown = pywbem.Uint32(2)
+            Timeout = pywbem.Uint32(3)
+            Failed = pywbem.Uint32(4)
+            Invalid_Parameter = pywbem.Uint32(5)
+            In_Use = pywbem.Uint32(6)
+            # DMTF_Reserved = ..
+            Method_Parameters_Checked___Job_Started = pywbem.Uint32(4096)
+            Size_Not_Supported = pywbem.Uint32(4097)
+            # Method_Reserved = 4098..32767
+            # Vendor_Specific = 32768..65535
+
+        class LMI_DeletePartition(object):
             Job_Completed_with_No_Error = pywbem.Uint32(0)
             Not_Supported = pywbem.Uint32(1)
             Unknown = pywbem.Uint32(2)

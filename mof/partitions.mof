@@ -177,6 +177,25 @@ class LMI_DiskPartitionConfigurationService : CIM_DiskPartitionConfigurationServ
             "A reference to started job (may be null if job is completed).")]
       CIM_ConcreteJob REF Job
    );
+
+   [Implemented(true), Description("Delete partition."),
+   ValueMap { "0", "1", "2", "3", "4", "5", "6", "..", "4096",
+       "4097", "4098..32767", "32768..65535" },
+   Values { "Job Completed with No Error", "Not Supported",
+      "Unknown", "Timeout", "Failed", "Invalid Parameter",
+      "In Use", "DMTF Reserved",
+      "Method Parameters Checked - Job Started",
+      "Size Not Supported", "Method Reserved", "Vendor Specific" }]
+   uint32 LMI_DeletePartition(
+         [IN, Description (
+             "A reference an existing partition instance to "
+             "delete." )]
+      CIM_GenericDiskPartition REF Partition,
+
+      [IN(false), OUT, Description (
+            "A reference to started job (may be null if job is completed).")]
+      CIM_ConcreteJob REF Job
+  );
 };
 
    [Experimental, Description ( 

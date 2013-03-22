@@ -156,9 +156,10 @@ class TestSetPartitionStyle(StorageTestBase):
         self.assertDictEqual(outparams, {})
 
         # create partition on the disk
-        (retval, outparams) = self.wbemconnection.InvokeMethod(
+        (retval, outparams) = self.invoke_async_method(
                 "LMI_CreateOrModifyPartition",
                 self.service,
+                int, 'partition',
                 extent=self.disk_name)
         self.assertEqual(retval, 0)
         partition = outparams['partition']
@@ -171,7 +172,12 @@ class TestSetPartitionStyle(StorageTestBase):
                 PartitionStyle=part_style)
 
         # remove the partition
-        self.wbemconnection.DeleteInstance(partition)
+        (ret, outparams) = self.invoke_async_method(
+                "LMI_DeletePartition",
+                self.service,
+                int, None,
+                Partition=partition)
+        self.assertEquals(ret, 0)
 
 
     # TODO: add SetPartitionStyle on RAID, LVM etc.

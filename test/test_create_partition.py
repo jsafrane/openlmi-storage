@@ -243,7 +243,12 @@ class TestCreatePartition(StorageTestBase):
                 delta=4 * 1024 * 2)  # 4 megabytes
 
         self._delete_setting(goal.path)
-        self.wbemconnection.DeleteInstance(partition)
+        (ret, outparams) = self.invoke_async_method(
+                "LMI_DeletePartition",
+                self.service,
+                int, None,
+                Partition=partition)
+        self.assertEquals(ret, 0)
 
     def test_mbr_maximum(self):
         """
@@ -299,7 +304,12 @@ class TestCreatePartition(StorageTestBase):
                 )
 
         self._delete_setting(goal.path)
-        self.wbemconnection.DeleteInstance(partition)
+        (ret, outparams) = self.invoke_async_method(
+                "LMI_DeletePartition",
+                self.service,
+                int, None,
+                Partition=partition)
+        self.assertEquals(ret, 0)
 
     def test_gpt_sizes(self):
         """
@@ -346,7 +356,12 @@ class TestCreatePartition(StorageTestBase):
         self._delete_setting(goal.path)
 
         for partition in partitions:
-            self.wbemconnection.DeleteInstance(partition)
+            (ret, outparams) = self.invoke_async_method(
+                    "LMI_DeletePartition",
+                    self.service,
+                    int, None,
+                    Partition=partition)
+            self.assertEquals(ret, 0)
 
     def test_mbr_sizes(self):
         """
@@ -396,8 +411,18 @@ class TestCreatePartition(StorageTestBase):
 
         partitions.reverse()
         for partition in partitions:
-            self.wbemconnection.DeleteInstance(partition)
-        self.wbemconnection.DeleteInstance(extended_partition)
+            (ret, outparams) = self.invoke_async_method(
+                    "LMI_DeletePartition",
+                    self.service,
+                    int, None,
+                    Partition=partition)
+            self.assertEquals(ret, 0)
+        (ret, outparams) = self.invoke_async_method(
+                "LMI_DeletePartition",
+                self.service,
+                int, None,
+                Partition=extended_partition)
+        self.assertEquals(ret, 0)
 
         # remove the extended partition, created automatically
 
@@ -460,8 +485,18 @@ class TestCreatePartition(StorageTestBase):
 
         partitions.reverse()
         for partition in partitions:
-            self.wbemconnection.DeleteInstance(partition)
-        self.wbemconnection.DeleteInstance(extended_partition)
+            (ret, outparams) = self.invoke_async_method(
+                    "LMI_DeletePartition",
+                    self.service,
+                    int, None,
+                    Partition=partition)
+            self.assertEquals(ret, 0)
+        (ret, outparams) = self.invoke_async_method(
+                "LMI_DeletePartition",
+                self.service,
+                int, None,
+                Partition=extended_partition)
+        self.assertEquals(ret, 0)
 
     # TODO: test partition modification
 
