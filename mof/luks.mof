@@ -172,10 +172,6 @@ class LMI_LUKSFormatCapabilities : LMI_EncryptionFormatCapabilities
         ArrayType("Indexed")]
     uint16 IVModes[];
 
-    [ Description("Array of names of supported initialization vector modes for modes, which have value \"Other\" in IVModes property."),
-        ArrayType("Indexed")]
-    string OtherCiphers[];
-
     [ Description("Array of supported hash algorithms used to derive initial vector in \"ESSIV\" mode."),
         ValueMap { "0", "1", "2", "3" },
         Values { "SHA256", "SHA1", "MD5", "Other"},

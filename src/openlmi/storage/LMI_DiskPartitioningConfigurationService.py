@@ -232,7 +232,6 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
     # Too many arguments, but this is generated function!
     # pylint: disable-msg=R0913
     def cim_method_createormodifypartition(self, env, object_name,
-                                           param_goal=None,
                                            param_partition=None,
                                            param_devicefilename=None,
                                            param_extent=None,
@@ -266,10 +265,7 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
                     "Parameter DeviceFileName is not supported.")
 
-        # check goal
-        goal = self._parse_goal(param_goal)
-
-        (device, logical) = self._parse_extent(param_extent, goal)
+        (device, logical) = self._parse_extent(param_extent, None)
         if logical:
             # Recalculate start/end addresses from 'relative to extended
             # partition start' to 'relative to disk start'
@@ -290,14 +286,14 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
             if param_endingaddress is None:
                 end = 0
             (retval, partition) = self._modify_partition(
-                    partition, goal, start, end)
+                    partition, None, start, end)
         else:
             if param_startingaddress is None:
                 start = minstart
             if param_endingaddress is None:
                 end = maxend
             (retval, partition) = self._create_partition(
-                    device, goal, start, end)
+                    device, None, start, end)
 
         partition_name = self.provider_manager.get_name_for_device(partition)
         out_params = [pywbem.CIMParameter('partition', type='reference',

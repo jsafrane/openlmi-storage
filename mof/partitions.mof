@@ -58,7 +58,7 @@ class LMI_DiskPartitionConfigurationService : CIM_DiskPartitionConfigurationServ
       CIM_DiskPartitionConfigurationCapabilities REF PartitionStyle);
 
 
-      [Implemented(false),Description ( 
+      [Override, Implemented(false),Description ( 
           "This method creates a new partition if the Partition "
           "parameter is null or modifies the partition specified. "
           "If the starting and ending address parameters are null, "
@@ -118,10 +118,7 @@ class LMI_DiskPartitionConfigurationService : CIM_DiskPartitionConfigurationServ
          [IN, OUT, Description ( 
              "A reference an existing partition instance to "
              "modify or null to request a new partition." )]
-      CIM_GenericDiskPartition REF Partition,
-      
-      [IN, Description("Setting to be applied to created/modified partition.")]
-      LMI_DiskPartitionConfigurationSetting REF Goal
+      CIM_GenericDiskPartition REF Partition
     );
     
    [Implemented(true), Description("Create new partition on given extent."
@@ -286,7 +283,6 @@ class LMI_DiskPartitionConfigurationCapabilities : CIM_DiskPartitionConfiguratio
     [Implemented(true)] boolean OverlapAllowed;
     [Implemented(true)] uint32 PartitionTableSize;
     [Implemented(true)] uint16 SupportedSynchronousActions[];
-    [Implemented(true)] uint16 ValidSubPartitionStyles[];
 };
 
 [ Experimental ]
