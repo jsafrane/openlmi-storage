@@ -337,9 +337,14 @@ class LMI_DiskPartition : CIM_DiskPartition
     [ Implemented(true) ] uint64 BlockSize;
     [ Implemented(true) ] uint64 NumberOfBlocks;
     [ Implemented(true) ] uint64 ConsumableBlocks;
-    
+
     [ Implemented(true) ] boolean PrimaryPartition;
     [ Implemented(true) ] uint16 PartitionType;
+
+    [Implemented(true), Description(
+          "All names, under which this device is known. "
+          "All these names are symlinks to one block device.")]
+    string Names[];
 };
 
 [Experimental, Description("This class represents partitions on "
@@ -361,6 +366,11 @@ class LMI_GenericDiskPartition : CIM_GenericDiskPartition
     [ Implemented(true) ] uint64 BlockSize;
     [ Implemented(true) ] uint64 NumberOfBlocks;
     [ Implemented(true) ] uint64 ConsumableBlocks;
+
+    [Implemented(true), Description(
+          "All names, under which this device is known. "
+          "All these names are symlinks to one block device.")]
+    string Names[];
 };
 
 [ Experimental ]

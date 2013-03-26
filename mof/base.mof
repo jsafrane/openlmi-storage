@@ -19,6 +19,11 @@ class LMI_StorageExtent : CIM_StorageExtent
           "Subclasses may define it's own ElementName format." )]
     string ElementName;
 
+    [Implemented(true), Description(
+          "All names, under which this device is known. "
+          "All these names are symlinks to one block device.")]
+    string Names[];
+
     [ Implemented(true) ] uint16 NameNamespace;
     [ Implemented(true) ] uint16 NameFormat;
     [ Implemented(true) ] string Name;

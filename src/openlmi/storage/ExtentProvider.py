@@ -152,6 +152,17 @@ class ExtentProvider(DeviceProvider):
         return discriminator
 
     @cmpi_logging.trace_method
+    def get_names(self, device):
+        """
+        Return array of all aliases (symlinks) of the device. The real
+        device path is always the first element of the array.
+
+        :param device: (``StorageDevice``) The device.
+        :returns: ``array of strings``.
+        """
+        return [device.path] + device.deviceLinks
+
+    @cmpi_logging.trace_method
     # pylint: disable-msg=W0221
     def get_instance(self, env, model, device=None):
         """
@@ -206,6 +217,7 @@ class ExtentProvider(DeviceProvider):
         # TODO: add DeltaReservation (mandatory in SMI-S)
 
         model['Primordial'] = self.get_primordial(device)
+        model['Names'] = self.get_names(device)
 
         discriminator = self.get_discriminator(device)
         model['ExtentDiscriminator'] = pywbem.CIMProperty(
