@@ -113,27 +113,19 @@ class StorageTestBase(unittest.TestCase):
         cls.indication_queue = Queue.Queue()
         cls.listener = None
         print cls.mydir
-        cls.disk_name = pywbem.CIMInstanceName(
-                classname=cls.DISK_CLASS,
-                namespace="root/cimv2",
-                keybindings={
-                        'DeviceID': cls.disk,
-                        'SystemCreationClassName': cls.SYSTEM_CLASS_NAME,
-                        'SystemName': cls.SYSTEM_NAME,
-                        'CreationClassName': cls.DISK_CLASS})
         cls.wbemconnection = pywbem.WBEMConnection(cls.url, (cls.username, cls.password))
 
-        # Get the first partition and copy its name for all other partitions
-        part = cls.wbemconnection.ExecQuery(
-                "WQL", 'select * from CIM_StorageExtent where Name="' + cls.partitions[0] + '"')[0]
-        template = part.path
+        disk = cls.wbemconnection.ExecQuery("WQL",
+                    'select * from CIM_StorageExtent where Name="'
+                    + cls.disk + '"')[0]
+        cls.disk_name = disk.path
+
         cls.partition_names = []
-        for device_id in cls.partitions:
-            name = pywbem.CIMInstanceName(classname=template.classname,
-                    namespace=template.namespace,
-                    keybindings=template.keybindings)
-            name['DeviceID'] = device_id
-            cls.partition_names.append(name)
+        for device in cls.partitions:
+            partition = cls.wbemconnection.ExecQuery("WQL",
+                    'select * from CIM_StorageExtent where Name="'
+                    + device + '"')[0]
+            cls.partition_names.append(partition.path)
 
 
     def setUp(self):

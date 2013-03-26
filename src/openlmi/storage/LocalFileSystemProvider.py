@@ -24,6 +24,7 @@ from openlmi.storage.SettingHelper import SettingHelper
 from openlmi.storage.SettingManager import Setting
 from openlmi.storage.SettingProvider import SettingProvider
 import openlmi.common.cmpi_logging as cmpi_logging
+from openlmi.storage.util import storage
 
 class LocalFileSystemProvider(FormatProvider, SettingHelper):
     """
@@ -363,11 +364,10 @@ class LocalFileSystemProvider(FormatProvider, SettingHelper):
             given InstanceID.
             Return None if there is no such instance.
         """
-        # TODO: use something more stable than device path
         path = setting_provider.parse_setting_id(instance_id)
         if not path:
             return None
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         if not device:
             return None
         if not device.format:
@@ -381,11 +381,10 @@ class LocalFileSystemProvider(FormatProvider, SettingHelper):
             association for setting with given ID.
             Return None if no such ManagedElement exists.
         """
-        # TODO: use something more stable than device path
         path = setting_provider.parse_setting_id(instance_id)
         if not path:
             return None
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         if not device:
             return None
         fmt = device.format

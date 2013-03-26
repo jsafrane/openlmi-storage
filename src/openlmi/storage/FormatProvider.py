@@ -21,6 +21,7 @@
 import pywbem
 from openlmi.storage.BaseProvider import BaseProvider
 import openlmi.common.cmpi_logging as cmpi_logging
+from openlmi.storage.util import storage
 
 class FormatProvider(BaseProvider):
     """
@@ -87,7 +88,7 @@ class FormatProvider(BaseProvider):
         if uuid:
             return "UUID=" + uuid
 
-        return "DEVICE=" + device.path
+        return "DEVICE=" + storage.get_persistent_name(device)
 
     @cmpi_logging.trace_method
     def get_format_for_id(self, name):
@@ -101,7 +102,7 @@ class FormatProvider(BaseProvider):
 
         if name.startswith("DEVICE="):
             (_unused, devname) = name.split("=")
-            device = self.storage.devicetree.getDeviceByPath(devname)
+            device = storage.get_device_for_persistent_name(self.storage, devname)
         elif name.startswith("UUID="):
             (_unused, uuid) = name.split("=")
             device = self.storage.devicetree.getDeviceByUuid(uuid)

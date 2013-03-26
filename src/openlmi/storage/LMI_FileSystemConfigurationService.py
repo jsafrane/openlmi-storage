@@ -24,6 +24,7 @@ from openlmi.storage.JobManager import Job
 from openlmi.storage.ServiceProvider import ServiceProvider
 import pywbem
 import openlmi.common.cmpi_logging as cmpi_logging
+from openlmi.storage.util import storage
 
 class LMI_FileSystemConfigurationService(ServiceProvider):
     """

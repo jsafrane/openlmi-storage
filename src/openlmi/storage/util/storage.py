@@ -174,3 +174,46 @@ def log_storage_call(msg, args):
     logger = cmpi_logging.logger
     if logger:
         logger.info(msg + ": " + str(print_args))
+
+@cmpi_logging.trace_function
+def get_persistent_name(device):
+    """
+    Return stable device name of given device.
+
+    Current order of significance: by-id, by-partuuid, by-path, by-uuid, /dev
+
+    :param device: (``StorageDevice``) The device.
+    :returns: ``string``
+    """
+    prefixes = ["/dev/disk/by-id/", "/dev/disk/by-partuuid/",
+            "/dev/disk/by-path/", "/dev/disk/by-uuid/"]
+    links = device.deviceLinks
+    found = False
+    # Find a symlink which matches the topmost prefix"
+    for prefix in prefixes:
+        for link in links:
+            if link.startswith(prefix):
+                found = True
+                break
+        if found:
+            break
+    if found:
+        return link
+    return device.path
+
+@cmpi_logging.trace_function
+def get_device_for_persistent_name(_blivet, name):
+    """
+    Return device for given device name or device symlink name as returned
+    by get_persistent_name.
+
+    :param _blivet: (``Blivet``) Blivet instance.
+    :param name: (``string``) Name of the device or device symlink.
+    :returns: ``StorageDevice`` or ``None``, if no device matches the name.
+    """
+    for device in _blivet.devices:
+        if name == device.path:
+            return device
+        if name in device.deviceLinks:
+            return device
+    return None

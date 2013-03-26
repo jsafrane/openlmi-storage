@@ -95,7 +95,9 @@ class SettingProvider(BaseProvider):
             It returns None if the format is not OK.
             This method can be used in get_configuration_for_id.
         """
-        parts = instance_id.split(":")
+        # some devices (raid) have ':' in their /dev/disk/by-id, do not
+        # include it in the split
+        parts = instance_id.split(":", 2)
         if len(parts) != 3:
             return None
         if parts[0] != "LMI":

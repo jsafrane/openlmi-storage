@@ -199,7 +199,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
         lv = self.storage.newLV(**args)
         action = blivet.deviceaction.ActionCreateDevice(lv)
         storage.do_storage_action(self.storage, [action])
-
+        # re-read the device from blivet, it should have all device links
+        lv = self.storage.devicetree.getDeviceByPath(lv.path)
         newsize = lv.size * units.MEGABYTE
         lvname = self.provider_manager.get_name_for_device(lv)
         outparams = {
@@ -985,6 +986,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
         action = blivet.ActionCreateDevice(raid)
         storage.do_storage_action(self.storage, [action])
 
+        # re-read the device from blivet, it should have all device links
+        raid = self.storage.devicetree.getDeviceByPath(raid.path)
         newsize = raid.size * units.MEGABYTE
         raidname = self.provider_manager.get_name_for_device(raid)
         outparams = {

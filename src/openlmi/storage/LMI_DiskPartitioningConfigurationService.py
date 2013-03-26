@@ -470,6 +470,8 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
 
         ret = self.Values.LMI_CreateOrModifyPartition\
                 .Job_Completed_with_No_Error
+        # re-read the partition from blivet, it should have all device links
+        partition = self.storage.devicetree.getDeviceByPath(partition.path)
         partition_name = self.provider_manager.get_name_for_device(partition)
         outparams = {
                 'Size': pywbem.Uint64(size),

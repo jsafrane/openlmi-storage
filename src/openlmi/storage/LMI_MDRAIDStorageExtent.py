@@ -109,9 +109,10 @@ class LMI_MDRAIDStorageExtent(ExtentProvider, SettingHelper):
     @cmpi_logging.trace_method
     def _get_setting_for_device(self, device, setting_provider):
         """ Return setting for given device """
+        _id = storage.get_persistent_name(device)
         setting = StorageSetting(
                 StorageSetting.TYPE_CONFIGURATION,
-                setting_provider.create_setting_id(device.path))
+                setting_provider.create_setting_id(_id))
         setting.set_setting(self.get_redundancy(device))
         setting['ElementName'] = device.path
         return setting
@@ -138,7 +139,7 @@ class LMI_MDRAIDStorageExtent(ExtentProvider, SettingHelper):
         path = setting_provider.parse_setting_id(instance_id)
         if not path:
             return None
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         if not path:
             return None
         if not isinstance(device, blivet.devices.MDRaidArrayDevice):
@@ -157,7 +158,7 @@ class LMI_MDRAIDStorageExtent(ExtentProvider, SettingHelper):
         path = setting_provider.parse_setting_id(instance_id)
         if not path:
             return None
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         if not path:
             return None
         if not isinstance(device, blivet.devices.MDRaidArrayDevice):

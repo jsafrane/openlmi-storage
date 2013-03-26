@@ -24,6 +24,7 @@ from openlmi.storage.SettingManager import Setting
 
 import parted
 import openlmi.common.cmpi_logging as cmpi_logging
+from openlmi.storage.util import storage
 
 class LMI_DiskPartitionConfigurationSetting(SettingProvider):
     """
@@ -48,8 +49,8 @@ class LMI_DiskPartitionConfigurationSetting(SettingProvider):
         """
             Return Setting with configuration of given device.
         """
-        setting = Setting(Setting.TYPE_CONFIGURATION,
-                self.create_setting_id(device.path))
+        _id = self.create_setting_id(storage.get_persistent_name(device))
+        setting = Setting(Setting.TYPE_CONFIGURATION, _id)
         setting['Bootable'] = str(device.bootable)
         flag = device.getFlag(parted.PARTITION_HIDDEN)
         if flag:
@@ -83,7 +84,7 @@ class LMI_DiskPartitionConfigurationSetting(SettingProvider):
         if not path:
             return None
 
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         if not device:
             return None
         return self.get_configuration(device)
@@ -98,7 +99,7 @@ class LMI_DiskPartitionConfigurationSetting(SettingProvider):
         if not path:
             return None
 
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         if not device:
             return None
 

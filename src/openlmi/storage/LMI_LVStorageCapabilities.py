@@ -24,6 +24,7 @@ from openlmi.storage.SettingManager import StorageSetting
 import pywbem
 import blivet.devices
 from openlmi.storage.BaseProvider import BaseProvider
+from openlmi.storage.util import storage
 
 class LMI_LVStorageCapabilities(CapabilitiesProvider):
     """ Provider of LMI_LVStorageCapabilities class."""
@@ -42,7 +43,7 @@ class LMI_LVStorageCapabilities(CapabilitiesProvider):
         path = self.parse_instance_id(instance_id)
         if not path:
             return None
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         if not device:
             return None
         if not isinstance(device,
@@ -66,7 +67,8 @@ class LMI_LVStorageCapabilities(CapabilitiesProvider):
 
         redundancy = self.pool_provider.get_redundancy(device)
         caps = {}
-        caps['InstanceID'] = self.create_capabilities_id(device.path)
+        _id = storage.get_persistent_name(device)
+        caps['InstanceID'] = self.create_capabilities_id(_id)
         caps['ElementName'] = device.path
         caps['DataRedundancyDefault'] = \
                 pywbem.Uint16(redundancy.data_redundancy)
@@ -159,7 +161,7 @@ class LMI_LVStorageCapabilities(CapabilitiesProvider):
         path = self.parse_instance_id(instance_id)
         if not path:
             return None
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         if not device:
             return None
         if not isinstance(device,

@@ -43,18 +43,17 @@ class TestDisk(StorageTestBase):
     def test_enumerate_instances(self):
         """ Test EnumerateInstances on disks and their properties. """
         disks = self.wbemconnection.EnumerateInstances(self.DISK_CLASS)
+        disknames = [disk.path for disk in disks]
         self.assertGreater(len(disks), 1)
 
         # check that all disks were returned
-        device_ids = map(lambda x: x['DeviceID'], disks)
-        self.assertIn(self.disk, device_ids)
+        self.assertCIMNameIn(self.disk_name, disknames)
 
         # now, check common properties
         for disk in disks:
-            if disk['DeviceID'] != self.disk:
+            if disk['DeviceID'] != self.disk_name['DeviceID']:
                 continue
 
-            self.assertEqual(disk['DeviceID'], disk['Name'])
             self.assertEqual(disk['ExtentStripeLength'], 1)
             self.assertEqual(disk['DataRedundancy'], 1)
             self.assertEqual(disk['PackageRedundancy'], 0)
@@ -72,18 +71,14 @@ class TestDisk(StorageTestBase):
         disknames = self.wbemconnection.EnumerateInstanceNames(self.DISK_CLASS)
         self.assertGreater(len(disknames), 1)
 
-        # check that all disks were returned
-        device_ids = map(lambda x: x['DeviceID'], disknames)
-        self.assertIn(self.disk, device_ids)
+        self.assertCIMNameIn(self.disk_name, disknames)
 
         # check that every disk can be get
         for diskname in disknames:
             disk = self.wbemconnection.GetInstance(diskname)
             self.assertIsNotNone(disk)
-            if diskname['DeviceID'] == self.disk:
+            if diskname['DeviceID'] == self.disk_name['DeviceID']:
                 self._check_name(disk.path)
-            self.assertEqual(diskname['DeviceID'], disk['DeviceID'])
-
 
     def _create_disk_name(self, device_id):
         """ Return CIMInstanceName for given DeviceID."""
@@ -97,17 +92,17 @@ class TestDisk(StorageTestBase):
         return name
 
     def test_get(self):
-        name = self._create_disk_name(self.disk)
+        name = self._create_disk_name(self.disk_name['DeviceID'])
         disk = self.wbemconnection.GetInstance(name)
         self.assertIsNotNone(disk)
 
     def test_remove(self):
-        name = self._create_disk_name(self.disk)
+        name = self._create_disk_name(self.disk_name['DeviceID'])
         self.assertRaises(pywbem.CIMError,
                 self.wbemconnection.DeleteInstance, name)
 
     def test_modify(self):
-        name = self._create_disk_name(self.disk)
+        name = self._create_disk_name(self.disk_name['DeviceID'])
         disk = self.wbemconnection.GetInstance(name)
         self.assertRaises(pywbem.CIMError,
                 self.wbemconnection.ModifyInstance, disk)

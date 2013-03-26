@@ -40,7 +40,7 @@ class ExtentProvider(DeviceProvider):
             Get Anaconda StorageDevice for given name, without any checks.
         """
         path = object_name['DeviceID']
-        device = self.storage.devicetree.getDeviceByPath(path)
+        device = storage.get_device_for_persistent_name(self.storage, path)
         return device
 
     @cmpi_logging.trace_method
@@ -80,14 +80,13 @@ class ExtentProvider(DeviceProvider):
             Returns CIM InstanceName for given Anaconda StorageDevice.
             None if no device is found.
         """
-        path = device.path
         name = pywbem.CIMInstanceName(self.classname,
                 namespace=self.config.namespace,
                 keybindings={
                     'SystemName' : self.config.system_name,
                     'SystemCreationClassName' : self.config.system_class_name,
                     'CreationClassName' : self.classname,
-                    'DeviceID': path
+                    'DeviceID': storage.get_persistent_name(device)
                 })
         return name
 
