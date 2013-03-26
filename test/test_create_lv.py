@@ -43,7 +43,7 @@ class TestCreateLV(StorageTestBase):
         self.part_service = self.wbemconnection.EnumerateInstanceNames(
                 "LMI_DiskPartitionConfigurationService")[0]
 
-        vgname = self._create_vg()
+        vgname = self._create_vg(self.partition_names[:1])
         self.vg = self.wbemconnection.GetInstance(vgname)
         self.lvcaps_name = self.wbemconnection.AssociatorNames(vgname,
                 AssocClass="LMI_LVElementCapabilities")[0]
@@ -52,7 +52,7 @@ class TestCreateLV(StorageTestBase):
         self._destroy_vg(self.vg.path)
         super(TestCreateLV, self).tearDown()
 
-    def _create_vg(self):
+    def _create_vg(self, devicenames, name="tstName"):
         """
             Create a partition and Volume Group on it and return its
             CIMInstanceName.
@@ -61,8 +61,8 @@ class TestCreateLV(StorageTestBase):
                 "CreateOrModifyVG",
                 self.service,
                 int, "pool",
-                InExtents=self.partition_names[:1],
-                ElementName='tstName')
+                InExtents=devicenames,
+                ElementName=name)
         self.assertEqual(ret, 0)
         return outparams['pool']
 
@@ -143,12 +143,25 @@ class TestCreateLV(StorageTestBase):
 
     def test_create_no_goal(self):
         """ Test CreateOrModifyLV without any Goal."""
+        self._test_create_no_goal(self.vg.path)
+
+    def test_create_no_goal_raid(self):
+        """ Test CreateOrModifyLV without any Goal on MDRAID."""
+        raidname = self._create_mdraid(self.partition_names[2:4], 0)
+        vgname = self._create_vg([raidname], "tstRaid")
+        self._test_create_no_goal(vgname)
+        self._destroy_vg(vgname)
+        self._delete_mdraid(raidname)
+
+    def _test_create_no_goal(self, vgname):
+        """ Test CreateOrModifyLV without any Goal on a VG."""
+        vg = self.wbemconnection.GetInstance(vgname)
         (retval, outparams) = self.invoke_async_method(
                 "CreateOrModifyLV",
                 self.service,
                 int, "TheElement",
-                InPool=self.vg.path,
-                Size=pywbem.Uint64(10 * self.vg['ExtentSize']))
+                InPool=vgname,
+                Size=pywbem.Uint64(10 * vg['ExtentSize']))
         if len(outparams) == 1:
             # there is no Size returned, Pegasus does not support it yet
             # TODO: remove when pegasus supports embedded objects of unknown
@@ -159,18 +172,18 @@ class TestCreateLV(StorageTestBase):
 
         self.assertEqual(retval, 0)
         self.assertEqual(len(outparams), 2)
-        self.assertEqual(outparams['Size'], 10 * self.vg['ExtentSize'])
+        self.assertEqual(outparams['Size'], 10 * vg['ExtentSize'])
 
         lv_name = outparams['TheElement']
         lv = self.wbemconnection.GetInstance(lv_name)
-        vg_setting = self.wbemconnection.Associators(self.vg.path,
+        vg_setting = self.wbemconnection.Associators(vgname,
                 AssocClass="LMI_VGElementSettingData")[0]
         lv_setting = self.wbemconnection.Associators(lv_name,
                 AssocClass="LMI_LVElementSettingData")[0]
 
         self.assertEqual(
                 lv['BlockSize'] * lv['NumberOfBlocks'],
-                10 * self.vg['ExtentSize'])
+                10 * vg['ExtentSize'])
         self.assertEqual(
                 lv['NoSinglePointOfFailure'],
                 lv_setting['NoSinglePointOfFailure'])
@@ -197,13 +210,13 @@ class TestCreateLV(StorageTestBase):
                 vg_setting['ExtentStripeLength'])
 
         # check vg is reduced
-        new_vg = self.wbemconnection.GetInstance(self.vg.path)
+        new_vg = self.wbemconnection.GetInstance(vgname)
         self.assertEqual(
                 new_vg['RemainingExtents'],
-                self.vg['RemainingExtents'] - 10)
+                vg['RemainingExtents'] - 10)
         self.assertEqual(
                 new_vg['RemainingManagedSpace'],
-                self.vg['RemainingManagedSpace'] - 10 * self.vg['ExtentSize'])
+                vg['RemainingManagedSpace'] - 10 * vg['ExtentSize'])
 
         self.invoke_async_method("DeleteLV", self.service, int, None,
                 TheElement=lv_name)
@@ -280,14 +293,28 @@ class TestCreateLV(StorageTestBase):
     @unittest.skipIf(short_tests_only(), reason="Skipping long tests.")
     def test_create_10(self):
         """ Test CreateOrModifyLV 10x."""
+        self._test_create_10(self.vg.path)
+
+    @unittest.skipIf(short_tests_only(), reason="Skipping long tests.")
+    def test_create_10_raid(self):
+        """ Test CreateOrModifyLV 10x on MD RAID."""
+        raidname = self._create_mdraid(self.partition_names[2:4], 0)
+        vgname = self._create_vg([raidname], "tstRaid")
+        self._test_create_10(vgname)
+        self._destroy_vg(vgname)
+        self._delete_mdraid(raidname)
+
+    def _test_create_10(self, vgname):
+        """ Test CreateOrModifyLV 10x on given VG."""
+        vg = self.wbemconnection.GetInstance(vgname)
         lvs = []
         for i in range(10):
             (retval, outparams) = self.invoke_async_method(
                     "CreateOrModifyLV",
                     self.service,
                     int, "TheElement",
-                    InPool=self.vg.path,
-                    Size=pywbem.Uint64(2 * self.vg['ExtentSize']),
+                    InPool=vgname,
+                    Size=pywbem.Uint64(2 * vg['ExtentSize']),
                     )
             if len(outparams) == 1:
                 # there is no Size returned, Pegasus does not support it yet
@@ -298,7 +325,7 @@ class TestCreateLV(StorageTestBase):
                     outparams['Size'] = lv['BlockSize'] * lv['NumberOfBlocks']
             self.assertEqual(retval, 0)
             self.assertEqual(len(outparams), 2)
-            self.assertEqual(outparams['Size'], 2 * self.vg['ExtentSize'])
+            self.assertEqual(outparams['Size'], 2 * vg['ExtentSize'])
 
             lv_name = outparams['TheElement']
             lv = self.wbemconnection.GetInstance(lv_name)
@@ -308,7 +335,7 @@ class TestCreateLV(StorageTestBase):
 
             self.assertEqual(
                     lv['BlockSize'] * lv['NumberOfBlocks'],
-                    2 * self.vg['ExtentSize'])
+                    2 * vg['ExtentSize'])
             self.assertEqual(
                     lv['NoSinglePointOfFailure'],
                     lv_setting['NoSinglePointOfFailure'])
@@ -323,13 +350,13 @@ class TestCreateLV(StorageTestBase):
                     lv_setting['ExtentStripeLength'])
 
             # check vg is reduced
-            new_vg = self.wbemconnection.GetInstance(self.vg.path)
+            new_vg = self.wbemconnection.GetInstance(vgname)
             self.assertEqual(
                     new_vg['RemainingExtents'],
-                    self.vg['RemainingExtents'] - (i + 1) * 2)
+                    vg['RemainingExtents'] - (i + 1) * 2)
             self.assertEqual(
                     new_vg['RemainingManagedSpace'],
-                    self.vg['RemainingManagedSpace'] - (i + 1) * 2 * self.vg['ExtentSize'])
+                    vg['RemainingManagedSpace'] - (i + 1) * 2 * vg['ExtentSize'])
 
         for lv in lvs:
             self.invoke_async_method("DeleteLV", self.service, int, None,
