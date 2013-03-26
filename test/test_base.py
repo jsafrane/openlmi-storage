@@ -502,6 +502,42 @@ class StorageTestBase(unittest.TestCase):
         return (ret, outparams)
 
 
+    def _create_mdraid(self, devicenames, level):
+        """
+        Create MD RAID device from given devices.
+
+        :param devicenames: (``array of CIMInstanceNames``) RAID member devices.
+        :param level: (int) RAID level
+
+        :returns: ``CIMInstanceName`` of the RAID.
+        """
+        storage_service = self.wbemconnection.EnumerateInstanceNames(
+                "LMI_StorageConfigurationService")[0]
+        (ret, outparams) = self.invoke_async_method(
+                "CreateOrModifyMDRAID",
+                storage_service,
+                int, "theelement",
+                InExtents=devicenames,
+                Level=pywbem.Uint16(level))
+        self.assertEqual(ret, 0)
+        return outparams['theelement']
+
+
+    def _delete_mdraid(self, raidname):
+        """
+        Delete MD RAID.
+
+        :param raidname: (``CIMInstanceName``) RAID to delete.
+        """
+        storage_service = self.wbemconnection.EnumerateInstanceNames(
+                "LMI_StorageConfigurationService")[0]
+        (ret, _outparams) = self.invoke_async_method(
+                "DeleteMDRAID",
+                storage_service,
+                int,
+                TheElement=raidname)
+        self.assertEquals(ret, 0)
+
 def short_tests_only():
     """
         Returns True, if only short test should be executed, i.e.
