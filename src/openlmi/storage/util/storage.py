@@ -150,9 +150,6 @@ def do_storage_action(storage, actions):
                         "Result: " + repr(action.device))
 
     finally:
-        # workaround for bug #891971
-        open("/dev/.in_sysinit", "w")
-        os.system('udevadm control --env=ANACONDA=1')
         os.system('udevadm trigger --subsystem-match block')
         os.system('udevadm settle')
         storage.reset()
