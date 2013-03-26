@@ -1,7 +1,6 @@
 FILES=extent-inherit.svg \
     pool-inherit.svg
-    
-HOST="https://localhost:5989"
+
 TOPDIR=../../..
 MOFS=$(TOPDIR)/mof/base.mof \
     $(TOPDIR)/mof/luks.mof \
@@ -17,7 +16,7 @@ clean:
 	plantuml -config ../plantuml.cfg -Tsvg $<
 
 extent-inherit.uml: $(MOFS)
-	class2uml.py -s '(CIM_|SNIA_).*' -A -u $(HOST) `cat $(MOFS) | grep "^/*class" | cut -d ' ' -f 2 | egrep "LMI.*StorageExtent|Partition$$" ` >$@
+	openlmi-doc-class2uml -s '(CIM_|SNIA_).*' -A -M `echo $(MOFS) | sed 's/ / -M /g'` -S /usr/share/mof/cim-current/CIM_Schema.mof `cat $(MOFS) | grep "^/*class" | cut -d ' ' -f 2 | egrep "LMI.*StorageExtent|Partition$$" ` >$@
 
 pool-inherit.uml: $(MOFS)
-	class2uml.py -s '(CIM_|SNIA_).*' -A -u $(HOST) `cat $(MOFS) | grep "^/*class" | cut -d ' ' -f 2 | egrep "LMI.*StoragePool"` >$@
+	openlmi-doc-class2uml -s '(CIM_|SNIA_).*' -A -M `echo $(MOFS) | sed 's/ / -M /g'` -S /usr/share/mof/cim-current/CIM_Schema.mof `cat $(MOFS) | grep "^/*class" | cut -d ' ' -f 2 | egrep "LMI.*StoragePool"` >$@
