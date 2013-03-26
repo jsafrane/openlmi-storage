@@ -181,7 +181,7 @@ class TestCreateMDRAID(StorageTestBase):
                 ResultClass="LMI_MDRAIDBasedOn")
         self.assertEqual(len(basedons), len(devices))
         for basedon in basedons:
-            self.assertIn(basedon['Antecedent'], devices)
+            self.assertCIMNameIn(basedon['Antecedent'], devices)
             self.assertCIMNameEquals(basedon['Dependent'], raidname)
 
         # check setting

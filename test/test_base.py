@@ -447,7 +447,7 @@ class StorageTestBase(unittest.TestCase):
 
         return (ret, outparams)
 
-    def assertCIMNameEquals(self, first, second):
+    def _compare_cim_name(self, first, second):
         """
         Compare two CIMInstanceNames. Their hostname is not checked.
         """
@@ -456,9 +456,26 @@ class StorageTestBase(unittest.TestCase):
         second_host = second.host
         second.host = None
 
-        self.assertEquals(first, second)
+        equals = first == second
         first.host = first_host
         second.host = second_host
+        return equals
+
+    def assertCIMNameEquals(self, first, second):
+        """
+        Compare two CIMInstanceNames. Their hostname is not checked.
+        """
+        self.assertTrue(self._compare_cim_name(first, second))
+
+    def assertCIMNameIn(self, name, candidates):
+        """
+        Checks that given CIMInstanceName is in given set. It compares all
+        properties except hostname.
+        """
+        for candidate in candidates:
+            if self._compare_cim_name(name, candidate):
+                return
+        self.assertTrue(False, "name is not in candidates")
 
     def invoke_async_method(self,
             method_name,
