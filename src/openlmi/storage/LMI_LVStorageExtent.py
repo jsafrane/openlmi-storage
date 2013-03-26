@@ -129,7 +129,7 @@ class LMI_LVStorageExtent(ExtentProvider, SettingHelper):
         if not path:
             return None
         device = storage.get_device_for_persistent_name(self.storage, path)
-        if not path:
+        if not device:
             return None
         if not isinstance(device,
                 blivet.devices.LVMLogicalVolumeDevice):
