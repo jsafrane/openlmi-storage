@@ -946,13 +946,25 @@ class LMI_StorageConfigurationService(ServiceProvider):
 
     @cmpi_logging.trace_method
     # pylint: disable-msg=W0613
-    def _create_mdraid(self, job, level, goal, devicnames, name):
+    def _create_mdraid(self, job, level, goal, devicenames, name):
         """
             Create new  MD RAID. The parameters were already checked.
         """
+        # Delete format on all devices first
+        # This is workaround for #924245
+        # TODO: remove when the bug is fixed
+        actions = []
+        for devname in devicenames:
+            device = self.storage.devicetree.getDeviceByPath(devname)
+            if device:
+                actions.append(blivet.ActionDestroyFormat(device))
+        storage.do_storage_action(self.storage, actions)
+        # End of workaround
+
+
         # covert devices from strings to real devices
         devices = []
-        for devname in devicnames:
+        for devname in devicenames:
             device = self.storage.devicetree.getDeviceByPath(devname)
             if device is None:
                 raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
