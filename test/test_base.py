@@ -112,7 +112,6 @@ class StorageTestBase(unittest.TestCase):
         cls.indication_port = 12345
         cls.indication_queue = Queue.Queue()
         cls.listener = None
-        print cls.mydir
         cls.wbemconnection = pywbem.WBEMConnection(cls.url, (cls.username, cls.password))
 
         disk = cls.wbemconnection.ExecQuery("WQL",
