@@ -150,3 +150,12 @@ class LMI_AffectedStorageJobElement : LMI_AffectedJobElement
 class LMI_AssociatedStorageJobMethodResult : LMI_AssociatedJobMethodResult
 {
 };
+
+
+/*
+ Special comment for openlmi-doc-mof2rst to generate documentation of following
+ classes:
+
+class CIM_InstMethodCall
+
+*/
