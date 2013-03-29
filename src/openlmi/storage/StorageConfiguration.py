@@ -37,11 +37,11 @@ class StorageConfiguration(object):
     SETTINGS_DIR = 'settings/'
 
     defaults = {
-        'namespace' : 'root/cimv2',
-        'systemclassname' : 'Linux_ComputerSystem',
-        'tracing': 'false',
-        'blivet_tracing': 'false',
-        'stderr': 'false',
+        'Namespace' : 'root/cimv2',
+        'SystemClassName' : 'Linux_ComputerSystem',
+        'Debug': 'false',
+        'DebugBlivet': 'false',
+        'Stderr': 'false',
     }
 
     @cmpi_logging.trace_method
@@ -83,21 +83,21 @@ class StorageConfiguration(object):
             exist.
         """
         self.config.read(self.CONFIG_FILE)
-        if not self.config.has_section('common'):
-            self.config.add_section('common')
-        if not self.config.has_section('debug'):
-            self.config.add_section('debug')
+        if not self.config.has_section('CIM'):
+            self.config.add_section('CIM')
+        if not self.config.has_section('Log'):
+            self.config.add_section('Log')
         self._call_listeners()
 
     @property
     def namespace(self):
         """ Return namespace of OpenLMI storage provider."""
-        return self.config.get('common', 'namespace')
+        return self.config.get('CIM', 'Namespace')
 
     @property
     def system_class_name(self):
         """ Return SystemClassName of OpenLMI storage provider."""
-        return self.config.get('common', 'systemclassname')
+        return self.config.get('CIM', 'SystemClassName')
 
     @property
     def system_name(self):
@@ -107,15 +107,15 @@ class StorageConfiguration(object):
     @property
     def tracing(self):
         """ Return True if tracing is enabled."""
-        return self.config.getboolean('debug', 'tracing')
+        return self.config.getboolean('Log', 'Debug')
 
     @property
     def blivet_tracing(self):
         """ Return True if blivet tracing is enabled."""
-        return self.config.getboolean('debug', 'blivet_tracing')
+        return self.config.getboolean('Log', 'DebugBlivet')
 
     @property
     def stderr(self):
         """ Return True if logging to stderr is enabled."""
-        return self.config.getboolean('debug', 'stderr')
+        return self.config.getboolean('Log', 'Stderr')
 
