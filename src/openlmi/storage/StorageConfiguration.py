@@ -25,13 +25,13 @@ import openlmi.common.cmpi_logging as cmpi_logging
 class StorageConfiguration(object):
     """
         OpenLMI configuration file. By default, it resides in
-        /etc/opelmi/storage/storage.ini.
+        /etc/openlmi/storage/storage.conf.
         
         There should be only one instance of this class.
     """
 
     CONFIG_PATH = '/etc/openlmi/storage/'
-    CONFIG_FILE = CONFIG_PATH + 'storage.ini'
+    CONFIG_FILE = CONFIG_PATH + 'storage.conf'
 
     PERSISTENT_PATH = '/var/lib/openlmi-storage/'
     SETTINGS_DIR = 'settings/'
