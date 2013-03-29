@@ -18,6 +18,7 @@ Content:
 
    smis-profiles
    usage
+   admin
    todo
 
 OpenLMI Storage CIM classes:
