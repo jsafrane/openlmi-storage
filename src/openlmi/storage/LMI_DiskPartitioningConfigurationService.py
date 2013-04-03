@@ -437,7 +437,15 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
             max_partition = max_partition * device.partedDevice.sectorSize
             if max_partition < size:
                 ret = self.Values.LMI_CreateOrModifyPartition.Size_Not_Supported
-                return (ret, None, max_partition)
+                outparams = {'Size' : pywbem.Uint64(max_partition)}
+                job.finish_method(
+                        Job.STATE_FINISHED_OK,
+                        return_value=ret,
+                        return_type=Job.ReturnValueType.Uint32,
+                        output_arguments=outparams,
+                        affected_elements=[],
+                        error=None)
+
             # Ok, the partition will fit. Continue.
             grow = False
             size = size / units.MEGABYTE
