@@ -78,9 +78,8 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
         if isinstance(device, blivet.devices.PartitionDevice):
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED,
                     "Creation of extended partitions is not supported.")
-        if self.storage.deviceDeps(device):
-            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
-                    "The Extent is used.")
+        # Check the device is unused
+        storage.assert_unused(self.storage, [device])
 
         # check the capabilities
         mgr = self.provider_manager
@@ -611,6 +610,8 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
         if not device:
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                     "The devices disappeared: " + devicename)
+        # Check the device is unused
+        storage.assert_unused(self.storage, [device])
 
         action = blivet.ActionDestroyDevice(device)
         storage.do_storage_action(self.storage, [action])
@@ -645,6 +646,8 @@ class LMI_DiskPartitionConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
                     "Parameter Partition must be specified.")
         device = self._parse_partition(param_partition)
+        # Check the device is unused
+        storage.assert_unused(self.storage, [device])
 
         # prepare job
         job = Job(

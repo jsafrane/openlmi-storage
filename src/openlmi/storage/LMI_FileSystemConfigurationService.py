@@ -151,10 +151,12 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
         if len(devices) < 1:
             raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
                     "At least one InExtent must be specified")
+        # Check the devices are unused
+        storage.assert_unused(self.storage, devices)
+
         # Convert devices to strings, so we can survive if some of them
         # disappears or is changed while the job is queued.
         device_strings = [device.path for device in devices]
-        # TODO: check the devices are unused
 
         goal = self._parse_goal(param_goal, "LMI_FileSystemSetting")
         # TODO: check that goal has supported values
@@ -246,6 +248,9 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
                 raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                         "One of the devices disappeared: " + devname)
             devices.append(device)
+        # Check the devices are unused
+        storage.assert_unused(self.storage, devices)
+
         if fmt.type == 'btrfs':
             # BTRFS is different beast, we must create BTRFSVolumeDevice
             for device in devices:
@@ -380,6 +385,8 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
         if not fmt:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Unknown TheFileSystem instance.")
+        # Check the device is unused
+        storage.assert_unused(self.storage, [device])
 
         # prepare job
         job = Job(
@@ -420,6 +427,8 @@ class LMI_FileSystemConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Unknown TheFileSystem instance, the filesystem is "\
                     " probably already deleted.")
+        # Check the device is unused
+        storage.assert_unused(self.storage, [device])
 
         actions = []
         if isinstance(device, blivet.devices.BTRFSVolumeDevice):

@@ -538,10 +538,11 @@ class LMI_StorageConfigurationService(ServiceProvider):
                 raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                         "Device %s disappeared." % (devname,))
             devices.append(device)
+        # Check the devices are unused
+        storage.assert_unused(self.storage, devices)
 
         actions = []
         for device in devices:
-            # TODO: check if it is unused!
             if not (device.format
                     and isinstance(device.format,
                         blivet.formats.lvmpv.LVMPhysicalVolume)):
@@ -681,6 +682,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
             jobname = "MODIFY VG %s" % (name)
             poolname = self.provider_manager.get_name_for_device(pool)
         else:
+            # Check the devices are unused
+            storage.assert_unused(self.storage, devices)
             jobname = "CREATE VG %s FROM %s" % (name, ",".join(devnames))
 
         job = Job(
@@ -970,8 +973,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
             if device is None:
                 raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                         "Device %s disappeared." % (devname,))
-            # TODO: check if devices are unused!
             devices.append(device)
+        # Check the devices are unused
+        storage.assert_unused(self.storage, devices)
 
         args = {}
         args['parents'] = devices
@@ -1121,6 +1125,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
                     raid, param_level, goal, devices, name, input_arguments,
                     method_name)
         else:
+            # Check the devices are unused
+            storage.assert_unused(self.storage, devices)
             return self._schedule_create_mdraid(
                     param_level, goal, devices, name, input_arguments,
                     method_name)
@@ -1138,6 +1144,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
         if not isinstance(device, blivet.devices.MDRaidArrayDevice):
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                     "Device %s is not LMI_MDRAIDStorageExtent" % (devicepath,))
+
+        # Check the device is unused
+        storage.assert_unused(self.storage, [device])
 
         # finally delete it
         actions = []
@@ -1210,6 +1219,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_INVALID_PARAMETER,
                     "Parameter TheElement must be specified an must be "
                     "reference to LMI_MDRAIDStorageExtent")
+        # Check the device is unused
+        storage.assert_unused(self.storage, [raid])
+
         # Schedule the job
         job = Job(
                 job_manager=self.job_manager,
@@ -1245,6 +1257,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
         if not isinstance(pool, blivet.devices.LVMVolumeGroupDevice):
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                     "Device %s is not LMI_VGStoragePool" % (poolpath,))
+
+        # Check the device is unused
+        storage.assert_unused(self.storage, [pool])
 
         # finally delete it
         action = blivet.ActionDestroyDevice(pool)
@@ -1288,6 +1303,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                     "Parameter Pool is mandatory and must be"
                     " LMI_VGStoragePool.")
+        # Check the device is unused
+        storage.assert_unused(self.storage, [pool])
 
         # Schedule the job
         job = Job(
@@ -1347,6 +1364,9 @@ class LMI_StorageConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                     "Device %s is not LMI_LVStorageExtent" % (devicepath,))
 
+        # Check the device is unused
+        storage.assert_unused(self.storage, [device])
+
         # finally delete it
         action = blivet.ActionDestroyDevice(device)
         storage.do_storage_action(self.storage, [action])
@@ -1391,6 +1411,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
             raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
                     "Parameter TheElement is mandatory and must be"
                     " LMI_LVStorageExtent.")
+        # Check the device is unused
+        storage.assert_unused(self.storage, [device])
 
         # Schedule the job
         job = Job(
