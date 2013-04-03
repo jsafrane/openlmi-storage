@@ -217,3 +217,42 @@ def get_device_for_persistent_name(_blivet, name):
         if name in device.deviceLinks:
             return device
     return None
+
+@cmpi_logging.trace_function
+def assert_unused(_blivet, devices):
+    """
+    Check that given devices are not used. Throw pywbem.CIMError if so.
+
+    'Used' means that the device is either mounted or other device depends on
+    it.
+
+    :param _blivet: (``Blivet``) Blivet instance.
+    :param devices: (array of ``StorageDevice``s) Devices to check.
+    :returns None:
+    """
+    for device in devices:
+        fs = device.format
+        if fs:
+            try:
+                mountpoint = fs.mountpoint
+            except AttributeError:
+                mountpoint = None
+            if mountpoint:
+                # The device has mounted filesystem -> it is used.
+                raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                    "Device %s is mounted at %s." % (device.path, mountpoint))
+
+        children = _blivet.deviceDeps(device)
+        for child in children:
+            # Members of stopped stopped MD RAID and other stopped devices
+            # are unused.
+            if not child.status:
+                continue
+
+            # Unmounted BTRFs formats are unused.
+            if isinstance(child, blivet.devices.BTRFSVolumeDevice):
+                assert_unused(_blivet, [child])
+                continue
+
+            raise pywbem.CIMError(pywbem.CIM_ERR_FAILED,
+                "Device %s is used by %s." % (device.path, child.path))
