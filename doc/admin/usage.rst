@@ -1,20 +1,26 @@
-.. _openlmi-usage:
+OpenLMI-Storage usage
+=====================
 
-OpenLMI-Storage concept
-=======================
+Block devices cannot be directly manipulated using intrinsic or extrinsic
+methods of ``CIM_StorageExtent`` or ``LMI_VGStoragePool``.
 
-OpenLMI-Storage provides CIM API. Some CIM knowledge is required and this guide
-assumes that reader can routinely read and modify remote CIM objects and call
-their intrinsic and extrinsic methods.
+Please appropriate ``ConfigurationService`` to create, modify or delete devices
+or volume groups:
 
-No SMI-S knowledge is necessary, but it can help a lot.
 
-.. toctree::
+.. toctree:: 
    :maxdepth: 2
 
-   usage-generic
-   usage-conventions
-   usage-devices
-   usage-overwrite
-   usage-job
+   usage-partitioning
+   usage-raid
+   usage-lvm
+   usage-fs
 
+
+.. note::
+
+   Previous releases allowed to use ``DeleteInstance`` intrinsic method to
+   delete various ``LMI_StorageExtents``. This method is now deprecated and
+   will be removed from future releases of OpenLMI-Storage. The reason is that
+   ``DeleteInstance`` cannot be asynchronous and could block the whole provider
+   for a long time.

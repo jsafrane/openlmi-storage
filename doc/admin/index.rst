@@ -17,8 +17,8 @@ Content:
    :maxdepth: 2
 
    smis-profiles
+   concept
    usage
-   usage-manipulate
    admin
    todo
 
