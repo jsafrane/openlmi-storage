@@ -414,9 +414,12 @@ class StorageTestBase(unittest.TestCase):
 
         outparams = {}
         if affected_output_name is not None:
-            element = self.wbemconnection.AssociatorNames(jobname,
-                    AssocClass="LMI_AffectedStorageJobElement")[0]
-            outparams[affected_output_name] = element
+            elements = self.wbemconnection.AssociatorNames(jobname,
+                    AssocClass="LMI_AffectedStorageJobElement")
+            if (len(elements) > 0):
+                outparams[affected_output_name] = elements[0]
+            else:
+                outparams[affected_output_name] = None
 
         # get the MethodResult
         resultname = self.wbemconnection.AssociatorNames(jobname,
