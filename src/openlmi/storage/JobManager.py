@@ -475,7 +475,8 @@ class Job(object):
         inst['SourceInstance'] = src_instance
         inst['SourceInstanceModelPath'] = str(src_instance.path)
         inst['MethodName'] = self.method_name
-        inst['MethodParameters'] = self._get_method_params(True)
+        inst['MethodParameters'] = self.get_method_params(
+                '__MethodParameters', True, False)
         inst['PreCall'] = True
         return inst
 
@@ -500,7 +501,8 @@ class Job(object):
         inst['SourceInstance'] = src_instance
         inst['SourceInstanceModelPath'] = str(src_instance.path)
         inst['MethodName'] = self.method_name
-        inst['MethodParameters'] = self._get_method_params(True)
+        inst['MethodParameters'] = self.get_method_params(
+                '__MethodParameters', True, True)
         inst['PreCall'] = False
 
         if self.return_value_type is not None:
@@ -531,13 +533,21 @@ class Job(object):
         return self.job_manager.get_job_instance(self)
 
     @cmpi_logging.trace_method
-    def _get_method_params(self, output=True):
+    def get_method_params(self, class_name, include_input, include_output):
         """
-        Assemble __MethodParameters for CIM_InstMethodCall indication.
-        
-        :rtype: CIMInstance of __MethodParameters.
+        Create a class of given name with all input or output parameters
+        of the asynchronous method. Typically used to assemble
+        CIM_ConcreteJob.JobInParameters or CIM_InstMethodCall.MethodParameters
+        values.
+
+        :param class_name: (``string``) Name of the class to create.
+        :param input: (``boolean``) Whether input parameters should be
+            included in the returned class
+        :param output: (``boolean``) Whether output parameters should be
+            included in the returned class
+        :rtype: CIMInstance of the created class.
         """
-        # TODO: this is workaround for bug #920763, use __MethodParameters
+        # TODO: this is workaround for bug #920763, use class_name
         # when it's fixed
         clsname = "CIM_ManagedElement"
         path = pywbem.CIMInstanceName(
@@ -545,13 +555,13 @@ class Job(object):
                 namespace=self.job_manager.namespace,
                 keybindings={})
         inst = pywbem.CIMInstance(classname=clsname, path=path)
-        for (name, value) in self.input_arguments.iteritems():
-            inst[name] = value
-        if output:
+        if include_input and self.input_arguments:
+            for (name, value) in self.input_arguments.iteritems():
+                inst[name] = value
+        if include_output and self.output_arguments:
             # overwrite any input parameter
-            if self.output_arguments:
-                for (name, value) in self.output_arguments.iteritems():
-                    inst[name] = value
+            for (name, value) in self.output_arguments.iteritems():
+                inst[name] = value
         return inst
 
     # pylint: disable-msg=R0903
@@ -656,7 +666,7 @@ class JobManager(object):
 
         # Start the worker thread (don't forget to register it at CIMOM)
         self.worker = threading.Thread(target=self._worker_main)
-        self.worker.daemon=True
+        self.worker.daemon = True
         self.worker.start()
 
         # Various classnames for job-related classes, with correct infixes.
@@ -986,6 +996,17 @@ class LMI_ConcreteJob(CIMProvider2):
                     name='StartTime',
                     value=None,
                     type='datetime')
+
+        if job.input_arguments:
+            model['JobInParameters'] = job.get_method_params(
+                    "__JobInParameters", True, False)
+
+        if job.job_state in Job.FINAL_STATES:
+            # assemble output parameters with return value
+            outparams = job.get_method_params("__JobOutParameters", False, True)
+            if job.return_value is not None:
+                outparams['__ReturnValue'] = job.return_value
+            model['JobOutParameters'] = outparams
 
         model['TimeSubmitted'] = pywbem.CIMDateTime(job.time_submitted)
         # set correct state
