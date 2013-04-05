@@ -48,6 +48,10 @@ Useful methods
   given RAID level for
   :ref:`CreateOrModifyElementFromElements <LMI-StorageConfigurationService-CreateOrModifyElementFromElements>`.
 
+:ref:`DeleteMDRAID <LMI-StorageConfigurationService-DeleteMDRAID>`
+  Destroys a MD RAID. There is no SMI-S function for this.
+
+
 Use cases
 ---------
 
@@ -134,13 +138,13 @@ Following code lists all members od ``/dev/md/myRAID``::
 Delete MD RAID
 ^^^^^^^^^^^^^^
 
-Simply call ``DeleteInstance()`` intrinsic method of appropriate
-:ref:`LMI_MDRAIDStorageExtent <LMI-MDRAIDStorageExtent>` instance::
+Call :ref:`DeleteMDRAID <LMI-StorageConfigurationService-DeleteMDRAID>` method::
 
     md = root.LMI_MDRAIDStorageExtent.first_instance(
             Key="DeviceID",
             Value="/dev/md/myRAID")
-    md.delete()
+    (ret, outparams, err) = storage_service.DeleteMDRAID(
+            TheElement = md.path)
 
 Future direction
 ----------------

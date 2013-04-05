@@ -67,6 +67,18 @@ Useful methods
 :ref:`CreateOrModifyElementFromStoragePool <LMI-StorageConfigurationService-CreateOrModifyElementFromStoragePool>`
   Creates a Logical Volume in SMI-S way.
 
+:ref:`DeleteLV <LMI-StorageConfigurationService-DeleteLV>`
+  Destroys a Logical Volume.
+
+:ref:`ReturnToStoragePool <CIM-StorageConfigurationService-ReturnToStoragePool>`
+  Destroys a Logical Volume in SMI-S way.
+
+:ref:`DeleteVG <LMI-StorageConfigurationService-DeleteVG>`
+  Destroys a Volume Group.
+
+:ref:`DeleteStoragePool <CIM-StorageConfigurationService-DeleteStoragePool>`
+  Destroys a Volume Group in SMI-S way.
+
 Use cases
 ---------
 
@@ -255,24 +267,22 @@ used::
 Delete VG
 ^^^^^^^^^
 
-Simply call ``DeleteInstance()`` intrinsic method of appropriate
-:ref:`LMI_LVStorageExtent <LMI-LVStorageExtent>` instance::
+Call :ref:`DeleteVG <LMI-StorageConfigurationService-DeleteVG>` method::
 
     vg = root.LMI_VGStoragePool.first_instance(
             Key="InstanceID", Value="LMI:VG:myGroup")
-    vg.delete()
-
+    (ret, outparams, err) = storage_service.DeleteVG(
+            Pool = vg.path)
 
 Delete LV
 ^^^^^^^^^
 
-Simply call ``DeleteInstance()`` intrinsic method of appropriate
-:ref:`LMI_LVStorageExtent <LMI-LVStorageExtent>` instance::
+Call :ref:`DeleteLV <LMI-StorageConfigurationService-DeleteLV>` method::
 
-    lv = root.LMI_MDRAIDStorageExtent.first_instance(
-            Key="DeviceID",
-            Value="/dev/mapper/myGroup-Vol1")
-    lv.delete()
+   lv = root.LMI_LVStorageExtent.first_instance(
+           Key="ElementName", Value="Vol2")
+   (ret, outparams, err) = storage_service.DeleteLV(
+           TheElement = lv.path)
 
 Future direction
 ----------------

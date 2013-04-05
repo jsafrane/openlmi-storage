@@ -60,6 +60,9 @@ Useful methods
   Finds start and end sector where a partition would be created and returns
   size of the partition.
 
+:ref:`LMI_DeletePartition <LMI-DiskPartitionConfigurationService-LMI-DeletePartition>`
+  Destroys a partition.
+
 The partitioning support is basic and has several limitations. Currently it is
 not possible to explicitly set partition position. OpenLMI chooses the best
 available free space for requested partitions. Typically, on empty disks, the
@@ -224,14 +227,14 @@ we can find size of the largest partition that can be created on ``/dev/sda``::
 Delete partition
 ^^^^^^^^^^^^^^^^
 
-Simply call ``DeleteInstance()`` intrinsic method of appropriate partition
-instance::
+Call
+:ref:`LMI_DeletePartition <LMI-DiskPartitionConfigurationService-LMI-DeletePartition>`::
 
     sda1 = root.CIM_StorageExtent.first_instance(
             Key="DeviceID",
             Value="/dev/sda1")
-    sda1.delete()
-
+    (ret, outparams, err) = partitioning_service.LMI_DeletePartition(
+            Partition = sda1.path)
 
 Future direction
 ----------------

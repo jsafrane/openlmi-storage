@@ -46,9 +46,23 @@ Device manipulation
 Block devices cannot be directly manipulated using intrinsic or extrinsic
 methods of ``CIM_StorageExtent`` or ``LMI_VGStoragePool``.
 
-The only exception is ``DeleteInstance`` intrinsic method, which removes the
-block device. The device must be *unused*, which means it must not be mounted
-or used as base of other block devices.
+Please use appropriate ``ConfigurationService`` to create, modify or delete devices
+or volume groups:
 
-Please appropriate ``ConfigurationService`` to create or modify devices or
-volume groups.
+* :doc:`usage-partitioning`.
+
+* :doc:`usage-raid`.
+
+* :doc:`usage-lvm`.
+
+* :doc:`usage-fs`.
+
+ .. note::
+
+   Previous releases allowed to use ``DeleteInstance`` intrinsic method to
+   delete various ``LMI_StorageExtents``. This method is now deprecated and will
+   be removed from future releases of OpenLMI-Storage.
+   
+   The reason is that  ``DeleteInstance`` cannot be asynchronous and could
+   block the whole provider for long time.
+

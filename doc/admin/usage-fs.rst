@@ -53,6 +53,14 @@ Useful methods
   Formats a StorageExtent with filesystem of given type. Currently the Goal
   parameter is not used, i.e. no filesystem options can be specified.
 
+
+:ref:`DeleteFileSystem <LMI-FileSystemConfigurationService-DeleteFileSystem>`
+  Destroys a file system (:ref:`LMI_LocalFileSystem <LMI-LocalFileSystem>`) or
+  other metadata, such as Physical Volume metadata or MD RAID metadata present
+  (:ref:`LMI_DataFormat<LMI-DataFormat>`) on a device.
+
+  Only unmounted filesystems and unused metadata can be deleted.
+
 Use cases
 ---------
 
@@ -100,7 +108,7 @@ Delete filesystem
 ^^^^^^^^^^^^^^^^^
 
 Use
-:ref:`LMI_CreateFileSystem <LMI-FileSystemConfigurationService-LMI-CreateFileSystem>`
+:ref:`LMI_CreateFileSystem <LMI-FileSystemConfigurationService-DeleteFileSystem>`
 method::
 
     sda1 = root.CIM_StorageExtent.first_instance(
