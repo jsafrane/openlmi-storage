@@ -18,6 +18,7 @@ Content:
 
    smis-profiles
    usage
+   usage-manipulate
    admin
    todo
 

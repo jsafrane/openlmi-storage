@@ -1,5 +1,5 @@
-Storage API concepts
-====================
+CIM API concepts
+================
 
 Storage API is based on several design patterns, which are common in CIM and
 SMI-S.

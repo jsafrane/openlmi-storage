@@ -1,7 +1,7 @@
 .. _openlmi-usage:
 
-OpenLMI-Storage usage
-=====================
+OpenLMI-Storage concept
+=======================
 
 OpenLMI-Storage provides CIM API. Some CIM knowledge is required and this guide
 assumes that reader can routinely read and modify remote CIM objects and call
@@ -17,10 +17,4 @@ No SMI-S knowledge is necessary, but it can help a lot.
    usage-devices
    usage-overwrite
    usage-job
-   usage-manipulate
-   usage-partitioning
-   usage-raid
-   usage-lvm
-   usage-fs
-
 

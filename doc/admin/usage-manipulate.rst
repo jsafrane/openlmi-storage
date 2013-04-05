@@ -1,5 +1,5 @@
-Device manipulation
-===================
+OpenLMI-Storage usage
+=====================
 
 Block devices cannot be directly manipulated using intrinsic or extrinsic
 methods of ``CIM_StorageExtent`` or ``LMI_VGStoragePool``.
@@ -9,8 +9,8 @@ or volume groups:
 
 
 .. toctree:: 
-
    :maxdepth: 2
+
    usage-partitioning
    usage-raid
    usage-lvm
