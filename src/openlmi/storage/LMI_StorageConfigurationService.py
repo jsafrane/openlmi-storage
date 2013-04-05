@@ -166,8 +166,8 @@ class LMI_StorageConfigurationService(ServiceProvider):
         newsize = device.size * units.MEGABYTE
         outparams = {}
         outparams['Size'] = pywbem.Uint64(newsize)
-        outparams['TheElement'] = \
-                self.provider_manager.get_name_for_device(device)
+        devname = self.provider_manager.get_name_for_device(device)
+        outparams['TheElement'] = devname
         ret = self.Values.CreateOrModifyElementFromStoragePool \
                 .Job_Completed_with_No_Error
 
@@ -176,7 +176,7 @@ class LMI_StorageConfigurationService(ServiceProvider):
                 return_value=ret,
                 return_type=Job.ReturnValueType.Uint32,
                 output_arguments=outparams,
-                affected_elements=[devicename],
+                affected_elements=[devname],
                 error=None)
 
     @cmpi_logging.trace_method
