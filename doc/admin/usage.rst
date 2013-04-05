@@ -15,7 +15,9 @@ No SMI-S knowledge is necessary, but it can help a lot.
    usage-generic
    usage-conventions
    usage-devices
+   usage-overwrite
    usage-job
+   usage-manipulate
    usage-partitioning
    usage-raid
    usage-lvm
