@@ -16,7 +16,7 @@ clean:
 	plantuml -config ../plantuml.cfg -Tsvg $<
 
 extent-inherit.uml: $(MOFS)
-	openlmi-doc-class2uml -s '(CIM_|SNIA_).*' -A -M `echo $(MOFS) | sed 's/ / -M /g'` -S /usr/share/mof/cim-current/CIM_Schema.mof `cat $(MOFS) | grep "^/*class" | cut -d ' ' -f 2 | egrep "LMI.*StorageExtent|Partition$$" ` >$@
+	openlmi-doc-class2uml -s '(CIM_|SNIA_).*' -A -M `echo $(MOFS) | sed 's/ / -M /g'` -S /usr/share/mof/cim-current/CIM_Schema.mof -S /usr/share/openlmi-providers/LMI_Qualifiers.mof `cat $(MOFS) | grep "^/*class" | cut -d ' ' -f 2 | egrep "LMI.*StorageExtent|Partition$$" ` >$@
 
 pool-inherit.uml: $(MOFS)
-	openlmi-doc-class2uml -s '(CIM_|SNIA_).*' -A -M `echo $(MOFS) | sed 's/ / -M /g'` -S /usr/share/mof/cim-current/CIM_Schema.mof `cat $(MOFS) | grep "^/*class" | cut -d ' ' -f 2 | egrep "LMI.*StoragePool"` >$@
+	openlmi-doc-class2uml -s '(CIM_|SNIA_).*' -A -M `echo $(MOFS) | sed 's/ / -M /g'` -S /usr/share/mof/cim-current/CIM_Schema.mof -S /usr/share/openlmi-providers/LMI_Qualifiers.mof `cat $(MOFS) | grep "^/*class" | cut -d ' ' -f 2 | egrep "LMI.*StoragePool"` >$@

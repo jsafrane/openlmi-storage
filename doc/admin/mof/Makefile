@@ -9,4 +9,4 @@ MOFS=$(TOPDIR)/mof/base.mof \
     $(TOPDIR)/mof/jobs.mof
 
 index.rst: $(MOFS)
-	openlmi-doc-class2rst -H header.txt -M `echo $(MOFS) | sed 's/ / -M /g'` -S /usr/share/mof/cim-current/CIM_Schema.mof `cat $(MOFS) | grep "^class" | cut -d ' ' -f 2`
+	openlmi-doc-class2rst -H header.txt -M `echo $(MOFS) | sed 's/ / -M /g'` -S /usr/share/mof/cim-current/CIM_Schema.mof -S /usr/share/openlmi-providers/LMI_Qualifiers.mof -S /usr/share/openlmi-providers/LMI_Jobs.mof `cat $(MOFS) | grep "^class" | cut -d ' ' -f 2`
