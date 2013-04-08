@@ -317,14 +317,13 @@ class Job(object):
         self._restart_timer()
         self.unlock()
 
-    @cmpi_logging.trace_method
     def _expire(self):
         """
         Callback when a Job completes and time_before_removal second passed.
         The job gets removed from its JobManager.
         """
-        cmpi_logging.logger.debug("Got timeout for job %s: '%s', removing"
-                " the job" % (self.the_id, self.job_name))
+        # We cannot log here, this method is executed in job's Timer thread,
+        # which is not registered at the cimom.
         self.job_manager.remove_job(self)
 
     @cmpi_logging.trace_method
@@ -798,7 +797,6 @@ class JobManager(object):
             self.indication_manager.send_instmodification(prev_instance,
                     current_instance, _id)
 
-    @cmpi_logging.trace_method
     def remove_job(self, job):
         """
         Remove existing job. Note that jobs are removed automatically after a
@@ -806,8 +804,8 @@ class JobManager(object):
         
         :param job: (``Job``) Job to remove.
         """
-        cmpi_logging.logger.debug("Removing job %s: '%s'"
-                % (job.the_id, job.job_name))
+        # We cannot log here, this method is executed in job's Timer thread,
+        # which is not registered at the cimom.
         del self.jobs[job.the_id]
         # The job may still be in the queue!
         # There is no way, how to remove it, it will be skipped by the
