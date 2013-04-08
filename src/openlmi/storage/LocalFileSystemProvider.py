@@ -309,6 +309,8 @@ class LocalFileSystemProvider(FormatProvider, SettingHelper):
         """
         if not fmt:
             (device, fmt) = self.get_format_for_name(model)
+        else:
+            device = self.storage.devicetree.getDeviceByPath(fmt.device)
         if not fmt:
             raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND,
                     "Cannot find the format.")
