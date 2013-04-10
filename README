@@ -19,13 +19,13 @@ Install src somewhere, using /usr/lib/python2.7/site-packages/openlmi/storage/ h
 
 Register python providers and MOF file:
     $ vim mof/LMI_Storage.reg     # change the paths in the file
-    $ sfcbrepos mof/LMI_Storage.mof mof/LMI_Storage.reg
+    $ sfcbrepos mof/60_LMI_Storage.mof mof/LMI_Storage.reg
 
 
 Documentation
 =============
 
-CIM API is fully documented in mof/LMI_Storage.mof and in doc/admin subdirectory.
+CIM API is fully documented in mof/60_LMI_Storage.mof and in doc/admin subdirectory.
 To compile the documentation to readable format install PlantUML, Dia and
 python-sphinx.
 
