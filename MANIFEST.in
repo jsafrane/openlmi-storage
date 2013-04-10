@@ -2,6 +2,7 @@ include COPYING CHANGES
 include doc/admin/Makefile doc/admin/conf.py doc/admin/*.rst doc/admin/pic/*.uml 
 include doc/admin/_static/* doc/admin/pic/*.dia doc/admin/openlmitheme/theme.conf
 include doc/admin/generated/Makefile doc/admin/mof/Makefile doc/admin/mof/header.txt
+include doc/admin/plantuml.cfg
 include mof/*.mof mof/LMI_Storage.reg
 include test/tools/*
 recursive-include test/unit *.py
