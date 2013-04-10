@@ -22,7 +22,7 @@ Following instance diagram shows four block devices:
 
 *  ``/dev/sda1`` and ``/dev/sda2`` with btrfs filesystem spanning both these
    devices.
-*  ``/dev/sda3``with ext3 filesystem.
+*  ``/dev/sda3`` with ext3 filesystem.
 * ``/dev/sda4`` with msdos filesystems. The msdos filesystem is unsupported,
   therefore it has no :ref:`LMI_FileSystemSetting <LMI-FileSystemSetting>`
   associated.
