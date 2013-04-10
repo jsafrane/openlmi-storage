@@ -136,7 +136,10 @@ class ExtentProvider(DeviceProvider):
         """
             Returns True, if given StorageDevice is primordial.
         """
-        return False
+        if isinstance(device, blivet.devices.DiskDevice):
+            return True
+        else:
+            return False
 
     @cmpi_logging.trace_method
     def get_discriminator(self, device):

@@ -59,6 +59,7 @@ class TestDisk(StorageTestBase):
             self.assertEqual(disk['PackageRedundancy'], 0)
             self.assertEqual(disk['NoSinglePointOfFailure'], False)
             self.assertEqual(disk['IsComposite'], False)
+            self.assertEqual(disk['Primordial'], True)
 
             # TODO: check exact values
             self.assertGreater(disk['NumberOfBlocks'], 0)

@@ -29,23 +29,8 @@ and pools.
     At least one primordial StoragePool shall always exists on the block
     storage system to represent the unallocated storage on the storage device.
 
-In SMI-S world, a storage system consists of *raw disks* or similar block
-devices. These are put into the primordial pool and further allocated as
-needed.
-
-On Linux, we have disks and partitions. If *disks* were primordial, we would not
-have any possibility to partition them. Therefore it seems it's the best to
-have **disk partitions and  unpartitioned disks as primordial**.
-
-.. note:: Anaconda does not support unpartitioned disks, therefore only
-   partitions are primordial for now.
-
-.. figure:: pic/primordial.png
-
-   Instance diagram of primordial pool with three partitions.
-
-.. warning:: This probably violates SMI-S, only raw disk devices should be
-   primordial. In addition, the hierarchy is quite ugly and complicated.
+OpenLMI-Storage uses raw disk as primordial. Everything else (partitions, RAIDs,
+logical volumes, ...) are not primordial.
 
 Logical disks
 -------------

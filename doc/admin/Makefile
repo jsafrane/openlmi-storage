@@ -48,7 +48,6 @@ clean:
 	plantuml -config plantuml.cfg -Tsvg $<
 
 figures: pic/partitions.png \
-    pic/primordial.png \
     pic/raid-lvm-simple.svg \
     pic/intro-setting.svg \
     pic/intro-service.svg \

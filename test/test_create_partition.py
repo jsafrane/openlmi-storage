@@ -232,6 +232,7 @@ class TestCreatePartition(StorageTestBase):
         partition = outparams['partition']
         disk_instance = self.wbemconnection.GetInstance(disk_name)
         partition_instance = self.wbemconnection.GetInstance(partition)
+        self.assertEqual(partition_instance['Primordial'], False)
 
         self.assertAlmostEqual(
                 disk_instance['NumberOfBlocks'],
@@ -311,6 +312,7 @@ class TestCreatePartition(StorageTestBase):
         partition = outparams['partition']
         disk_instance = self.wbemconnection.GetInstance(disk_name)
         partition_instance = self.wbemconnection.GetInstance(partition)
+        self.assertEqual(partition_instance['Primordial'], False)
 
         self.assertAlmostEqual(
                 disk_instance['NumberOfBlocks'],

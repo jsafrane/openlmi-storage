@@ -174,6 +174,7 @@ class TestCreateMDRAID(StorageTestBase):
         self.assertNotEqual(raid['UUID'], '')
         self.assertEqual(raid['Level'], level)
         self.assertNotEqual(raid['UUID'], None)
+        self.assertEqual(raid['Primordial'], False)
 
         # check based-on
         basedons = self.wbemconnection.References(

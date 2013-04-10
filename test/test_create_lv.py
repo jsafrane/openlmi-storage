@@ -208,6 +208,7 @@ class TestCreateLV(StorageTestBase):
         self.assertEqual(
                 lv['ExtentStripeLength'],
                 vg_setting['ExtentStripeLength'])
+        self.assertEqual(lv['Primordial'], False)
 
         # check vg is reduced
         new_vg = self.wbemconnection.GetInstance(vgname)
