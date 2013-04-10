@@ -1,0 +1,6 @@
+#pragma include("LMI_Storage-Base.mof")
+#pragma include("LMI_Storage-BlockStorage.mof")
+#pragma include("LMI_Storage-Filesystem.mof")
+#pragma include("LMI_Storage-Jobs.mof")
+#pragma include("LMI_Storage-Luks.mof")
+#pragma include("LMI_Storage-Partitions.mof")

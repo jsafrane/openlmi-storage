@@ -2,10 +2,10 @@ FILES=extent-inherit.svg \
     pool-inherit.svg
 
 TOPDIR=../../..
-MOFS=$(TOPDIR)/mof/base.mof \
-    $(TOPDIR)/mof/luks.mof \
-    $(TOPDIR)/mof/partitions.mof \
-    $(TOPDIR)/mof/storage.mof
+MOFS=$(TOPDIR)/mof/LMI_Storage-Base.mof \
+    $(TOPDIR)/mof/LMI_Storage-Luks.mof \
+    $(TOPDIR)/mof/LMI_Storage-Partitions.mof \
+    $(TOPDIR)/mof/LMI_Storage-BlockStorage.mof
 
 all: $(FILES)
 
