@@ -73,6 +73,7 @@ from openlmi.storage.LMI_FileSystemConfigurationCapabilities \
         import LMI_FileSystemConfigurationCapabilities
 from openlmi.storage.JobManager import JobManager
 from openlmi.storage.IndicationManager import IndicationManager
+from openlmi.storage.LMI_HostedFileSystem import LMI_HostedFileSystem
 
 import openlmi.common.cmpi_logging as cmpi_logging
 import blivet
@@ -356,6 +357,9 @@ def get_providers(env):
 
     job_providers = job_manager.get_providers()
     providers.update(job_providers)
+
+    provider = LMI_HostedFileSystem(**opts)
+    providers['LMI_HostedFileSystem'] = provider
 
     print "providers:", providers
     return providers

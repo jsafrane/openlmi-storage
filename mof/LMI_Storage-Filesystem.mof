@@ -291,3 +291,10 @@ class LMI_FileSystemConfigurationElementCapabilities : CIM_ElementCapabilities
 {
 };
 
+
+[ Experimental, Association ]
+class LMI_HostedFileSystem : CIM_HostedFileSystem
+{
+    [ Override("PartComponent") ]
+    LMI_LocalFileSystem REF PartComponent;
+};
