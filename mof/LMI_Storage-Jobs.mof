@@ -19,6 +19,13 @@ class LMI_AssociatedStorageJobMethodResult : LMI_AssociatedJobMethodResult
 {
 };
 
+class LMI_StorageInstModification : CIM_InstModification
+{
+};
+
+class LMI_StorageInstCreation : CIM_InstCreation
+{
+};
 
 /*
  Special comment for openlmi-doc-mof2rst to generate documentation of following
