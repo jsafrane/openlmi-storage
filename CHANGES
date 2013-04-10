@@ -1,3 +1,40 @@
+New in version 0.5.1:
+Reorganized the sources to use fully qualified import names.
+Use Blivet instead of Anaconda as storage backend.
+Use CMPILogger from openlmi-providers for logging.
+All CreateOrModify* and Delete* methods are now asynchronous.
+Block devices can be formatted with ext2/3/4, xfs and btrfs filesystems.
+Indications are now supported for LMI_StorageJobs.
+And as usual, fixed lot of bugs, improved test coverage and documentation.
+All changes should be backward-compatible.
+
+New SMI-S profiles:
+  Jobs Storage Subprofile
+  File Storage Profile
+  Filesystem Profile
+  Filesystem Manipulation Profile
+
+New classes:
+  LMI_AffectedStorageJobElement
+  LMI_AssociatedStorageJobMethodResult
+  LMI_DataFormat
+  LMI_FileSystemConfigurationCapabilities
+  LMI_FileSystemConfigurationElementCapabilities
+  LMI_FileSystemConfigurationService
+  LMI_FileSystemElementSettingData
+  LMI_FileSystemSetting
+  LMI_HostedFileSystem
+  LMI_LocalFileSystem
+  LMI_MDRAIDDataFormat
+  LMI_OwningStorageJobElement
+  LMI_PVDataFormat
+  LMI_ResidesOnExtent
+  LMI_StorageInstCreation
+  LMI_StorageInstModification
+  LMI_StorageJob
+  LMI_StorageJob
+  LMI_StorageMethodResult
+
 New in version 0.5.0:
 New and backward-incompatible storage model.
 Check documentation for details.

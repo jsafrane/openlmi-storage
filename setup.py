@@ -5,7 +5,7 @@ setup(
     author='Jan Safranek',
     author_email='jsafrane@redhat.com',
     url='https://fedorahosted.org/openlmi/',
-    version='0.5.1',
+    version='0.5.1.pre1',
     package_dir={'': 'src'},
     packages=['openlmi.storage', 'openlmi.storage.util'],
     classifiers=[
