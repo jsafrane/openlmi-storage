@@ -1,9 +1,3 @@
-/* 'Implemented' qualifier denotes the properties and method that are implemented
- * by appropriate provider.
- */
-Qualifier Implemented : boolean = false, Scope(property, method);
-
-
 [ Experimental, Description("This is generic class describing block devices "
     "available on the system, i.e. in machine's /dev/ directory.")]
 class LMI_StorageExtent : CIM_StorageExtent
